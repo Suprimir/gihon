@@ -4,9 +4,23 @@ on:
   push:
     branches:
       - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".gitignore"
+      - "LICENSE"
+      - ".vscode/**"
+      - ".idea/**"
   pull_request:
     branches:
       - main
+    paths-ignore:
+      - "**.md"
+      - "docs/**"
+      - ".gitignore"
+      - "LICENSE"
+      - ".vscode/**"
+      - ".idea/**"
   release:
     types: [created]
 
@@ -118,7 +132,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          targets: aarch64-apple-darwin,x86_64-apple-darwin
+          targets: aarch64-apple-darwin
 
       - name: Rust cache
         uses: swatinem/rust-cache@v2
@@ -129,15 +143,15 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: pnpm tauri build -- --target universal-apple-darwin
+        run: pnpm tauri build --target aarch64-apple-darwin
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
         with:
           name: tauri-macos
           path: |
-            src-tauri/target/universal-apple-darwin/release/bundle/dmg/*.dmg
-            src-tauri/target/universal-apple-darwin/release/bundle/macos/*.app
+            src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg
+            src-tauri/target/aarch64-apple-darwin/release/bundle/macos/*.app
           if-no-files-found: error
 
   release:
