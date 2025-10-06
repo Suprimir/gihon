@@ -17,10 +17,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -44,10 +48,10 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run tauri build
+        run: pnpm tauri build
 
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
@@ -64,10 +68,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -78,10 +86,10 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run tauri build
+        run: pnpm tauri build
 
       - name: Upload Windows artifacts
         uses: actions/upload-artifact@v4
@@ -98,10 +106,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: "npm"
+          cache: "pnpm"
 
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
@@ -114,10 +126,10 @@ jobs:
           workspaces: "./src-tauri -> target"
 
       - name: Install dependencies
-        run: npm ci
+        run: pnpm install --frozen-lockfile
 
       - name: Build
-        run: npm run tauri build -- --target universal-apple-darwin
+        run: pnpm tauri build -- --target universal-apple-darwin
 
       - name: Upload macOS artifacts
         uses: actions/upload-artifact@v4
@@ -133,19 +145,23 @@ jobs:
     needs: [build-linux, build-windows, build-macos]
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
+    permissions:
+      contents: write
     steps:
       - name: Download all artifacts
         uses: actions/download-artifact@v4
+        with:
+          path: artifacts
 
       - name: Display structure
-        run: ls -R
+        run: ls -R artifacts
 
       - name: Upload release assets
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           files: |
-            tauri-linux/**/*
-            tauri-windows/**/*
-            tauri-macos/**/*
+            artifacts/tauri-linux/**/*
+            artifacts/tauri-windows/**/*
+            artifacts/tauri-macos/**/*
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
