@@ -59,18 +59,25 @@ impl CbzViewer {
     pub fn extract_cover_image(cbz_path: &str) -> Result<Option<String>, String> {
         let file = File::open(cbz_path).map_err(|e| e.to_string())?;
         let mut archive = ZipArchive::new(BufReader::new(file)).map_err(|e| e.to_string())?;
-
+        let mut archives = Vec::new();
+        
         for i in 0..archive.len() {
-            let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
-            let name = file.name().to_lowercase();
-            println!("Checking file: {}", name);
+            let file = archive.by_index(i).map_err(|e| e.to_string())?;
+            archives.push(file.name().to_string());
+        }
 
-            if name.ends_with(".jpg") || name.ends_with(".png") {
+        archives.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
+
+        for name in archives {
+            let mut file = archive.by_name(&name).map_err(|e| e.to_string())?;
+            let name_lower = name.to_lowercase();
+
+            if name_lower.ends_with(".jpg") || name_lower.ends_with(".png") {
                 let mut buffer = Vec::new();
                 file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
                 let encoded = general_purpose::STANDARD.encode(buffer);
                 return Ok(Some(format!("data:image/{};base64,{}", 
-                    if name.ends_with(".png") { "png" } else { "jpeg" },
+                    if name_lower.ends_with(".png") { "png" } else { "jpeg" },
                     encoded
                 )));
             }
