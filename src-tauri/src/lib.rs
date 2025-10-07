@@ -16,7 +16,8 @@ pub fn run() {
             commands::read_comic_info,
             commands::get_metadata,
             commands::get_cover_image,
-            commands::read_cbz,
+            commands::load_image_by_index,
+            commands::get_page_count,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

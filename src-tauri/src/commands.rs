@@ -94,8 +94,16 @@ pub fn get_cover_image(app_handle: tauri::AppHandle, cbz_path: String) -> Result
 }
 
 #[command]
-pub fn read_cbz(app_handle: tauri::AppHandle, cbz_path: String) -> Result<Vec<String>, String> {
+pub fn load_image_by_index(app_handle: tauri::AppHandle, cbz_path: String, image_index: usize) -> Result<String, String> {
     let fm = FileManager::new(&app_handle)?;
     let full_path = fm.get_full_path(&cbz_path)?;    
-    CbzViewer::load_images(full_path.to_str().ok_or("Invalid path")?)
+    CbzViewer::load_image_by_index(full_path.to_str().ok_or("Invalid path")?, image_index)
+}
+
+#[command]
+pub fn get_page_count(app_handle: tauri::AppHandle, cbz_path: String) -> Result<usize, String> {
+    let fm = FileManager::new(&app_handle)?;
+    let full_path = fm.get_full_path(&cbz_path)?;
+    let image_list = CbzViewer::get_image_list(full_path.to_str().ok_or("Invalid path")?)?;
+    Ok(image_list.len())
 }

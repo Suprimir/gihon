@@ -42,7 +42,20 @@ impl FileManager {
         let destination_path = folder_path.join(file_name);
         fs::copy(source_path, &destination_path).map_err(|e| e.to_string())?;
         
-        let comic_info = CbzViewer::read_comic_info(destination_path.to_str().ok_or("Invalid path")?)?;
+        let comic_info = match CbzViewer::read_comic_info(destination_path.to_str().ok_or("Invalid path")?) {
+            Ok(info) => info,
+            Err(_) => {
+                println!("Warning: Could not read ComicInfo.xml, using placeholder data.");
+                ComicInfo {
+                    title: file_stem.to_string(),
+                    series: "".to_string(),
+                    writer: "Unknown".to_string(),
+                    summary: "".to_string(),
+                    year: "".to_string(),
+                }
+            },
+        };
+
         self.create_metadata_file(&folder_path, &comic_info).map_err(|e| e.to_string())?;
 
         let comic_cover = CbzViewer::extract_cover_image(destination_path.to_str().ok_or("Invalid path")?)?;

@@ -63,6 +63,7 @@ impl CbzViewer {
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
             let name = file.name().to_lowercase();
+            println!("Checking file: {}", name);
 
             if name.ends_with(".jpg") || name.ends_with(".png") {
                 let mut buffer = Vec::new();
@@ -78,30 +79,54 @@ impl CbzViewer {
         Ok(None)
     }
 
-    pub fn load_images(cbz_path: &str) -> Result<Vec<String>, String> {
+    pub fn get_image_list(cbz_path: &str) -> Result<Vec<String>, String> {
         let file = File::open(cbz_path).map_err(|e| e.to_string())?;
         let mut archive = ZipArchive::new(BufReader::new(file)).map_err(|e| e.to_string())?;
 
-        let mut images_base64 = Vec::new();
+        let mut images_path = Vec::new();
 
         let mut entries: Vec<_> = (0..archive.len()).collect();
         entries.sort_by_key(|&i| archive.by_index(i).unwrap().name().to_lowercase());
 
         for i in entries {
-            let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+            let file: zip::read::ZipFile<'_, BufReader<File>> = archive.by_index(i).map_err(|e| e.to_string())?;
             let name = file.name().to_lowercase();
 
             if name.ends_with(".jpg") || name.ends_with(".png") {
-                let mut buffer = Vec::new();
-                file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
-                let encoded = general_purpose::STANDARD.encode(buffer);
-                images_base64.push(format!("data:image/{};base64,{}", 
-                    if name.ends_with(".png") { "png" } else { "jpeg" },
-                    encoded
-                ));
+                images_path.push(file.name().to_string());
             }
         }
 
-        Ok(images_base64)
+        Ok(images_path)
+    }
+
+    pub fn load_image_by_index(cbz_path: &str, image_index: usize) -> Result<String, String> {
+        let file = File::open(cbz_path).map_err(|e| e.to_string())?;
+        let mut archive = ZipArchive::new(BufReader::new(file)).map_err(|e| e.to_string())?;
+
+        let images_list = Self::get_image_list(cbz_path)?;
+
+        let image_name = &images_list[image_index];
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+
+            if file.name() == image_name {
+                let mut buffer = Vec::new();
+                file.read_to_end( &mut buffer).map_err(|e| e.to_string())?;
+                let encoded = general_purpose::STANDARD.encode(buffer);
+                
+                let name_lower = image_name.to_lowercase();
+                let mime_type = if name_lower.ends_with(".png") {
+                    "png"
+                } else {
+                    "jpeg"
+                };
+
+                return Ok(format!("data:image/{};base64,{}", mime_type, encoded).to_string());
+            }
+        }
+
+        Err(format!("Image '{}' not found in archive", image_name))
     }
 }
