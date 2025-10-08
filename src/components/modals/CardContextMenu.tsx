@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Manga } from "../../types";
+import { useCallback, useEffect, useRef } from "react";
+import { Comic } from "../../types";
 import { Pencil, Trash } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 
@@ -10,7 +10,7 @@ interface CardContextMenuProps {
   onClose: () => void;
   onEdit: () => void;
   onDelete: () => void;
-  manga: Manga;
+  comic: Comic;
 }
 
 export default function CardContextMenu({
@@ -20,9 +20,11 @@ export default function CardContextMenu({
   onClose,
   onEdit,
   onDelete,
-  manga,
+  comic,
 }: CardContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // ---------------- Effects ----------------
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -34,12 +36,14 @@ export default function CardContextMenu({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [onClose]);
 
-  const handleDelete = async () => {
-    await invoke("delete_file", { cbzPath: manga.fileName });
+  // ---------------- Menu Actions ----------------
+
+  const handleDelete = useCallback(async () => {
+    await invoke("delete_file", { cbzPath: comic.fileName });
 
     onDelete();
     onClose();
-  };
+  }, [comic, onClose, onDelete]);
 
   if (!visible) return null;
 
@@ -50,7 +54,7 @@ export default function CardContextMenu({
       className="fixed z-50 p-2 rounded-md shadow-lg bg-gray-700 w-52 text-sm text-white"
     >
       <p className="px-2 py-1 text-xs font-medium text-primary-700">
-        {manga.comicInfo?.title || "Sin título"}
+        {comic.comicInfo?.title || "Sin título"}
       </p>
       <ul className="mt-1">
         <li className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-600/50">

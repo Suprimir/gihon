@@ -1,6 +1,6 @@
 export interface Config {}
 
-export interface ComicInfo {
+export interface Metadata {
   title: string;
   series: string;
   number: string;
@@ -14,7 +14,7 @@ export interface ComicInfo {
   page_count: string;
 }
 
-export interface Manga {
+export interface Comic {
   fileName: string;
-  comicInfo: ComicInfo | null;
+  comicInfo: Metadata | null;
 }
