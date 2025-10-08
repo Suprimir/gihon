@@ -18,6 +18,8 @@ pub fn run() {
             commands::get_cover_image,
             commands::load_image_by_index,
             commands::get_page_count,
+            commands::delete_file,
+            commands::edit_metadata_file,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

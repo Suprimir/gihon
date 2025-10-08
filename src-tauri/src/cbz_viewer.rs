@@ -9,9 +9,15 @@ use base64::Engine;
 pub struct ComicInfo {
     pub title: String,
     pub series: String,
-    pub writer: String,
+    pub number: String,
+    pub volume: String,
     pub summary: String,
     pub year: String,
+    pub month: String,
+    pub day: String,
+    pub writer: String,
+    pub publisher: String,
+    pub page_count: String,
 }
 
 pub struct CbzViewer;
@@ -39,16 +45,28 @@ impl CbzViewer {
 
                 let title = Self::extract_tag_value(&contents, "Title").unwrap_or_default();
                 let series = Self::extract_tag_value(&contents, "Series").unwrap_or_default();
-                let writer = Self::extract_tag_value(&contents, "Writer").unwrap_or_default();
+                let number = Self::extract_tag_value(&contents, "Number").unwrap_or_default();
+                let volume: String = Self::extract_tag_value(&contents, "Volume").unwrap_or_default();
                 let summary = Self::extract_tag_value(&contents, "Summary").unwrap_or_default();
                 let year: String = Self::extract_tag_value(&contents, "Year").unwrap_or_default();
+                let month: String = Self::extract_tag_value(&contents, "Month").unwrap_or_default();
+                let day: String = Self::extract_tag_value(&contents, "Day").unwrap_or_default();
+                let writer = Self::extract_tag_value(&contents, "Writer").unwrap_or_default();
+                let publisher = Self::extract_tag_value(&contents, "Publisher").unwrap_or_default();
+                let page_count: String = Self::extract_tag_value(&contents, "PageCount").unwrap_or_default();
 
                 return Ok(ComicInfo {
                     title,
                     series,
-                    writer,
+                    number,
+                    volume,
                     summary,
                     year,
+                    month,
+                    day,
+                    writer,
+                    publisher,
+                    page_count,
                 });
             }
         }

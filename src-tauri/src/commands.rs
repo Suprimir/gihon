@@ -107,3 +107,17 @@ pub fn get_page_count(app_handle: tauri::AppHandle, cbz_path: String) -> Result<
     let image_list = CbzViewer::get_image_list(full_path.to_str().ok_or("Invalid path")?)?;
     Ok(image_list.len())
 }
+
+#[command]
+pub fn delete_file(app_handle: tauri::AppHandle, cbz_path: String) -> Result<(), String> {
+    let fm = FileManager::new(&app_handle)?;
+    fm.delete_file(&cbz_path)?;
+    Ok(())
+}
+
+#[command]
+pub fn edit_metadata_file(app_handle: tauri::AppHandle, cbz_path: String, comic_info: ComicInfo) -> Result<(), String> {
+    let fm = FileManager::new(&app_handle)?;
+    fm.edit_metadata_file(&cbz_path, &comic_info)?;
+    Ok(())
+}

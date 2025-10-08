@@ -64,12 +64,18 @@ function App() {
       <Navbar setSearchTerm={setSearchTerm} />
 
       <div className="flex-1 flex flex-row flex-wrap justify-center content-start gap-4 p-4 overflow-y-auto">
+        {files.length === 0 && (
+          <div className="text-gray-400 text-center mt-20">
+            No manga files found. Drag and drop your .cbz files to get started.
+          </div>
+        )}
         {files.map((fileName) => (
           <Card
             searchTerm={searchTerm}
             key={fileName}
             fileName={fileName}
             onClick={(manga: Manga) => setSelectedManga(manga)}
+            onUpdate={refreshFiles}
           />
         ))}
       </div>

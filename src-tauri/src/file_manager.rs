@@ -49,9 +49,15 @@ impl FileManager {
                 ComicInfo {
                     title: file_stem.to_string(),
                     series: "".to_string(),
-                    writer: "Unknown".to_string(),
+                    number: "".to_string(),
+                    volume: "".to_string(),
                     summary: "".to_string(),
                     year: "".to_string(),
+                    month: "".to_string(),
+                    day: "".to_string(),
+                    writer: "Unknown".to_string(),
+                    publisher: "".to_string(),
+                    page_count: "".to_string(),
                 }
             },
         };
@@ -66,12 +72,37 @@ impl FileManager {
         Ok(())
     }
 
+    pub fn delete_file(&self, file_name: &str) -> Result<(), String> {
+        let file = Path::new(file_name);
+        let file_stem = file.file_stem().ok_or("Invalid file name")?.to_str().ok_or("Invalid file name")?;
+
+        let folder_path = self.directory.join(file_stem);
+        if folder_path.exists() {
+            fs::remove_dir_all(&folder_path).map_err(|e| e.to_string())?;
+        }
+
+        Ok(())
+    }
+
     pub fn create_metadata_file(&self, folder_path: &PathBuf, comic_info: &ComicInfo) -> Result<(), String> {
         let metadata_path = folder_path.join("metadata.json");
         let metadata = serde_json::to_string_pretty(comic_info).map_err(|e| e.to_string())?;
         fs::write(metadata_path, metadata).map_err(|e| e.to_string())?;
 
         Ok(())
+    }
+
+    pub fn edit_metadata_file(&self, cbz_path: &String, comic_info: &ComicInfo) -> Result<(), String> {
+        let file = Path::new(cbz_path);
+        let file_stem = file.file_stem().ok_or("Invalid file name")?.to_str().ok_or("Invalid file name")?;
+        let metadata_path = self.directory.join(file_stem).join("metadata.json");
+        if metadata_path.exists() {
+            let metadata = serde_json::to_string_pretty(comic_info).map_err(|e| e.to_string())?;
+            fs::write(metadata_path, metadata).map_err(|e| e.to_string())?;
+            Ok(())
+        } else {
+            Err("Metadata file does not exist".to_string())
+        }
     }
 
     pub fn copy_cover_image(&self, folder_path: &PathBuf, cover_image_data: &str) -> Result<(), String> {
