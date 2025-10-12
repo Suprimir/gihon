@@ -8,6 +8,8 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Comic } from "../types";
+import { useAlert } from "../contexts/useAlert";
+import { formatErrorMessage } from "../utils/formatError";
 
 interface MangaViewerProps {
   comic: Comic | null;
@@ -27,6 +29,7 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   const [showControls, setShowControls] = useState(true);
 
   const mouseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { showAlert } = useAlert();
 
   // ---------------- Image Loading and Caching ----------------
 
@@ -50,12 +53,18 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
 
         setCache((prevCache) => new Map(prevCache).set(index, imageData));
       } catch (error) {
+        showAlert(
+          "error",
+          "Error loading page",
+          formatErrorMessage(error),
+          5000
+        );
         console.error("Error loading page:", error);
       } finally {
         setIsLoading(false);
       }
     },
-    [comic, cache]
+    [comic, cache, showAlert]
   );
 
   const preloadPage = useCallback(
@@ -71,10 +80,16 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
         });
         setCache((prevCache) => new Map(prevCache).set(index, imageData));
       } catch (error) {
+        showAlert(
+          "error",
+          "Error loading page",
+          formatErrorMessage(error),
+          5000
+        );
         console.error("Error loading page:", error);
       }
     },
-    [comic, cache]
+    [comic, cache, showAlert]
   );
 
   // ---------------- Navigation ----------------

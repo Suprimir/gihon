@@ -2,7 +2,6 @@ use tauri::{AppHandle, Manager};
 use std::path::PathBuf;
 use std::fs;
 use serde::{Serialize, Deserialize};
-
 #[derive(Serialize, Deserialize)]
 pub struct Config {
 }

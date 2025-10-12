@@ -5,12 +5,15 @@ import { Upload } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { Comic } from "./types";
+import { useAlert } from "./contexts/useAlert";
+import { formatErrorMessage } from "./utils/formatError";
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [files, setFiles] = useState<string[]>([]);
   const [selectedComic, setSelectedComic] = useState<Comic | null>(null);
   const [isDragEntered, setIsDragEntered] = useState(false);
+  const { showAlert } = useAlert();
 
   const listFiles = useCallback(async (): Promise<string[]> => {
     try {
@@ -21,14 +24,21 @@ function App() {
     }
   }, []);
 
-  const addFile = useCallback(async (filePath: string): Promise<void> => {
-    try {
-      await invoke("add_file", { sourcePath: filePath });
-    } catch (error) {
-      console.error(`Error adding file ${filePath}:`, error);
-      throw new Error(`Failed to add file: ${filePath}`);
-    }
-  }, []);
+  const addFile = useCallback(
+    async (filePath: string): Promise<void> => {
+      try {
+        await invoke("add_file", { sourcePath: filePath });
+      } catch (error) {
+        showAlert(
+          "error",
+          "Error adding file",
+          formatErrorMessage(error),
+          5000
+        );
+      }
+    },
+    [showAlert]
+  );
 
   async function refreshFiles() {
     const updatedFiles = await listFiles();
@@ -60,10 +70,9 @@ function App() {
 
   const handleFileDrop = async (paths: string[]) => {
     setIsDragEntered(false);
-    const validFiles = paths.filter((path) => path.endsWith(".cbz"));
 
     try {
-      await Promise.all(validFiles.map((file) => addFile(file)));
+      await Promise.all(paths.map((file) => addFile(file)));
       await refreshFiles();
     } catch (error) {
       console.error("Error adding files:", error);

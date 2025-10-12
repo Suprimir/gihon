@@ -2,6 +2,8 @@ import { X } from "lucide-react";
 import { Comic } from "../../types";
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAlert } from "../../contexts/useAlert";
+import { formatErrorMessage } from "../../utils/formatError";
 
 interface EditorModalProps {
   comic: Comic;
@@ -19,6 +21,7 @@ export default function EditorModal({
   onUpdate,
 }: EditorModalProps) {
   const [actualComic, setActualComic] = useState<Comic>(comic);
+  const { showAlert } = useAlert();
 
   // ---------------- Effects ----------------
 
@@ -38,9 +41,15 @@ export default function EditorModal({
       onUpdate();
       onClose();
     } catch (error) {
+      showAlert(
+        "error",
+        "Error saving metadata",
+        formatErrorMessage(error),
+        5000
+      );
       console.error("Failed to save metadata:", error);
     }
-  }, [actualComic, comic, onClose, onUpdate]);
+  }, [actualComic, comic, onClose, onUpdate, showAlert]);
 
   if (!isOpen) return null;
 

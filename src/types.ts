@@ -18,3 +18,13 @@ export interface Comic {
   fileName: string;
   comicInfo: Metadata | null;
 }
+
+export interface Alert {
+  id: number;
+  type: AlertType;
+  title?: string;
+  message?: string;
+  duration?: number;
+}
+
+export type AlertType = "success" | "error" | "info";

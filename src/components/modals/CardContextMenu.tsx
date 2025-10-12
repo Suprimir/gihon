@@ -2,6 +2,8 @@ import { useCallback, useEffect, useRef } from "react";
 import { Comic } from "../../types";
 import { Pencil, Trash } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAlert } from "../../contexts/useAlert";
+import { formatErrorMessage } from "../../utils/formatError";
 
 interface CardContextMenuProps {
   x: number;
@@ -23,6 +25,7 @@ export default function CardContextMenu({
   comic,
 }: CardContextMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const { showAlert } = useAlert();
 
   // ---------------- Effects ----------------
 
@@ -39,11 +42,21 @@ export default function CardContextMenu({
   // ---------------- Menu Actions ----------------
 
   const handleDelete = useCallback(async () => {
-    await invoke("delete_file", { cbzPath: comic.fileName });
+    try {
+      await invoke("delete_file", { cbzPath: comic.fileName });
+    } catch (error) {
+      showAlert(
+        "error",
+        "Error deleting comic",
+        formatErrorMessage(error),
+        5000
+      );
+      console.error("Failed to delete comic:", error);
+    }
 
     onDelete();
     onClose();
-  }, [comic, onClose, onDelete]);
+  }, [comic, onClose, onDelete, showAlert]);
 
   if (!visible) return null;
 

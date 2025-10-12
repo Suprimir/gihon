@@ -4,6 +4,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
 import CardContextMenu from "./modals/CardContextMenu";
 import EditorModal from "./modals/EditorModal";
+import { useAlert } from "../contexts/useAlert";
+import { formatErrorMessage } from "../utils/formatError";
 
 interface CardProps {
   fileName: string;
@@ -27,6 +29,7 @@ export default function Card({
     x: 0,
     y: 0,
   });
+  const { showAlert } = useAlert();
 
   // ---------------- Data loading ----------------
 
@@ -40,13 +43,19 @@ export default function Card({
       setComic({ fileName, comicInfo: metadata });
       setCoverImage(cover || "");
     } catch (error) {
+      showAlert(
+        "error",
+        "Error loading comic data",
+        formatErrorMessage(error),
+        5000
+      );
       console.error(`Error loading data for ${fileName}:`, error);
       setComic({ fileName, comicInfo: null });
       setCoverImage("");
     } finally {
       setIsLoading(false);
     }
-  }, [fileName]);
+  }, [fileName, showAlert]);
 
   // ---------------- Search filtering ----------------
 
@@ -103,7 +112,7 @@ export default function Card({
 
   useEffect(() => {
     loadData();
-  }, [fileName]);
+  }, [loadData]);
 
   if (!isVisible()) return null;
 
