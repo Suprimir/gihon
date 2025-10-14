@@ -58,25 +58,31 @@ export default function CardContextMenu({
     <div
       ref={menuRef}
       style={{ top: y, left: x }}
-      className="fixed z-50 p-2 rounded-md shadow-lg bg-gray-700 w-52 text-sm text-white"
+      className="fixed z-50 min-w-[200px] rounded-lg shadow-2xl bg-gray-900 border border-gray-800 overflow-hidden backdrop-blur-sm animate-in fade-in slide-in-from-top-2 duration-200"
     >
-      <p className="px-2 py-1 text-xs font-medium text-primary-700">
-        {comic.comicInfo?.title || "Sin título"}
-      </p>
-      <ul className="mt-1">
-        <li className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-600/50">
-          <button onClick={onEdit} className="flex items-center gap-2 w-full">
-            <Pencil size={16} />
-            Edit comic
+      <div className="px-3 py-2 bg-gradient-to-r from-gray-800 to-gray-900 border-b border-gray-800">
+        <p className="text-xs font-semibold text-gray-300 truncate">
+          {comic.comicInfo?.title || "Sin título"}
+        </p>
+      </div>
+      <ul className="py-1">
+        <li>
+          <button
+            onClick={onEdit}
+            className="flex items-center gap-3 w-full px-3 py-2 text-sm text-gray-300 hover:bg-gray-800 hover:text-white transition-colors duration-150"
+          >
+            <Pencil size={16} className="text-blue-400" />
+            <span>Edit comic</span>
           </button>
         </li>
-        <li className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-600/50">
+        <li className="my-1 mx-2 border-t border-gray-800" />
+        <li>
           <button
             onClick={handleDelete}
-            className="flex items-center gap-2 w-full text-red-500 hover:text-red-400"
+            className="flex items-center gap-3 w-full px-3 py-2 text-sm text-red-400 hover:bg-red-500/10 hover:text-red-300 transition-colors duration-150"
           >
             <Trash size={16} />
-            Delete manga
+            <span>Delete manga</span>
           </button>
         </li>
       </ul>

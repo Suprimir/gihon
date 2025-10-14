@@ -1,4 +1,6 @@
-export interface Config {}
+export interface Config {
+  preload_offset: number;
+}
 
 export interface Metadata {
   title: string;

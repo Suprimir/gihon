@@ -1,7 +1,7 @@
 import { ReactNode, useCallback, useMemo, useState } from "react";
 import { Alert, AlertType } from "../types";
 import { createPortal } from "react-dom";
-import { CheckCircle, X, XCircle } from "lucide-react";
+import { CheckCircle, X, XCircle, Info } from "lucide-react";
 import { AlertContext } from "./alertContext";
 
 export const AlertProvider = ({ children }: { children: ReactNode }) => {
@@ -40,41 +40,70 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
   const AlertContainer = useCallback(() => {
     if (alerts.length === 0) return null;
 
+    const getAlertStyles = (type: AlertType) => {
+      switch (type) {
+        case "success":
+          return {
+            bgClass:
+              "bg-gradient-to-r from-emerald-900/95 to-emerald-800/95 border-emerald-700",
+            iconColor: "text-emerald-400",
+            icon: CheckCircle,
+          };
+        case "error":
+          return {
+            bgClass:
+              "bg-gradient-to-r from-rose-900/95 to-rose-800/95 border-rose-700",
+            iconColor: "text-rose-400",
+            icon: XCircle,
+          };
+        case "info":
+        default:
+          return {
+            bgClass:
+              "bg-gradient-to-r from-blue-900/95 to-blue-800/95 border-blue-700",
+            iconColor: "text-blue-400",
+            icon: Info,
+          };
+      }
+    };
+
     return createPortal(
-      <div className="fixed bottom-4 right-4 z-50 space-y-3 max-w-sm w-full">
-        {alerts.map((alert) => (
-          <div
-            key={alert.id}
-            className="p-4 rounded-lg shadow-lg backdrop-blur-sm bg-gray-700 text-gray-300 animate-in slide-in-from-right duration-300"
-          >
-            <div className="flex items-start gap-3">
-              {alert.type === "success" ? (
-                <CheckCircle className="w-5 h-5 flex-shrink-0" />
-              ) : (
-                <XCircle className="w-5 h-5 flex-shrink-0" />
-              )}
+      <div className="fixed bottom-4 right-4 z-50 space-y-3 max-w-md w-full">
+        {alerts.map((alert) => {
+          const { bgClass, iconColor, icon: Icon } = getAlertStyles(alert.type);
 
-              <div className="flex-1 min-w-0">
-                <h4 className="font-semibold text-sm text-white">
-                  {alert.title}
-                </h4>
-                {alert.message && (
-                  <p className="text-sm mt-1 text-white opacity-90 break-words whitespace-pre-wrap">
-                    {alert.message}
-                  </p>
-                )}
+          return (
+            <div
+              key={alert.id}
+              className={`${bgClass} border backdrop-blur-md rounded-xl shadow-2xl animate-in slide-in-from-right-5 fade-in duration-300 overflow-hidden`}
+            >
+              <div className="p-4 flex items-start gap-3">
+                <div className={`${iconColor} flex-shrink-0 mt-0.5`}>
+                  <Icon className="w-5 h-5" strokeWidth={2.5} />
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <h4 className="font-semibold text-sm text-white leading-tight">
+                    {alert.title}
+                  </h4>
+                  {alert.message && (
+                    <p className="text-sm mt-1.5 text-gray-200 leading-relaxed break-words whitespace-pre-wrap">
+                      {alert.message}
+                    </p>
+                  )}
+                </div>
+
+                <button
+                  onClick={() => hideAlert(alert.id)}
+                  className="flex-shrink-0 p-1.5 rounded-lg hover:bg-white/10 transition-all duration-200 text-gray-300 hover:text-white"
+                  aria-label="Cerrar alerta"
+                >
+                  <X className="w-4 h-4" strokeWidth={2.5} />
+                </button>
               </div>
-
-              <button
-                onClick={() => hideAlert(alert.id)}
-                className="flex-shrink-0 p-1 rounded-md hover:bg-gray-600 transition-colors"
-                aria-label="Cerrar alerta"
-              >
-                <X className="w-4 h-4" />
-              </button>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>,
       document.body
     );

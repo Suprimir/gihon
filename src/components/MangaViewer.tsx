@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Comic } from "../types";
+import { Comic, Config } from "../types";
 import { useAlert } from "../contexts/useAlert";
 
 interface MangaViewerProps {
@@ -16,7 +16,6 @@ interface MangaViewerProps {
 }
 
 const CONTROLS_HIDE_DELAY = 1200;
-const PRELOAD_OFFSET = 1;
 
 export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -26,9 +25,25 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [preloadOffset, setPreloadOffset] = useState<number>(1);
 
   const mouseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const { showAlert } = useAlert();
+
+  // Load preload offset from settings
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        const config = await invoke<Config>("load_config");
+        setPreloadOffset(config.preload_offset);
+      } catch (error) {
+        console.error("Failed to load config:", error);
+        // Use default value if config fails to load
+        setPreloadOffset(1);
+      }
+    };
+    loadConfig();
+  }, []);
 
   // ---------------- Image Loading and Caching ----------------
 
@@ -90,20 +105,20 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
     const nextIndex = currentPage + 1;
     setCurrentPage(nextIndex);
 
-    if (nextIndex + 1 < totalPages) {
-      preloadPage(nextIndex + PRELOAD_OFFSET);
+    if (nextIndex + preloadOffset < totalPages) {
+      preloadPage(nextIndex + preloadOffset);
     }
-  }, [currentPage, totalPages, preloadPage]);
+  }, [currentPage, totalPages, preloadPage, preloadOffset]);
 
   const previousPage = useCallback(() => {
     if (currentPage <= 0) return;
     const previousIndex = currentPage - 1;
     setCurrentPage(previousIndex);
 
-    if (previousIndex - 1 >= 0) {
-      preloadPage(previousIndex - PRELOAD_OFFSET);
+    if (previousIndex - preloadOffset >= 0) {
+      preloadPage(previousIndex - preloadOffset);
     }
-  }, [currentPage, preloadPage]);
+  }, [currentPage, preloadPage, preloadOffset]);
 
   const goToPage = useCallback(
     (page: number) => {
@@ -233,25 +248,28 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   return (
     <div
       onMouseMove={handleMouseMove}
-      className="fixed inset-0 bg-black z-50 flex flex-col"
+      className="fixed inset-0 bg-gradient-to-br from-gray-950 via-black to-gray-950 z-50 flex flex-col"
     >
       {!isFullscreen && (
-        <div className="bg-gray-900 p-4 flex justify-between items-center">
+        <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-b border-gray-800 p-4 flex justify-between items-center shadow-lg">
           <div className="flex items-center gap-4">
+            <div className="w-1 h-8 bg-gradient-to-b from-blue-500 to-purple-500 rounded-full" />
             <h2 className="text-white text-xl font-bold truncate max-w-md">
               {comic.comicInfo?.title || "Unknown Title"}
             </h2>
-            <span className="text-gray-400 text-sm">
-              {currentPage + 1} / {totalPages}
-            </span>
+            <div className="px-3 py-1 bg-gray-800/80 rounded-full border border-gray-700">
+              <span className="text-gray-300 text-sm font-medium">
+                {currentPage + 1} / {totalPages}
+              </span>
+            </div>
           </div>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="text-gray-400 hover:text-white hover:bg-gray-800 p-2 rounded-lg transition-all duration-200"
             title="Close Viewer (Esc)"
             aria-label="Close Viewer"
           >
-            <X size={28} />
+            <X size={24} />
           </button>
         </div>
       )}
@@ -259,8 +277,11 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
       <div className="flex-1 flex items-center justify-center bg-black overflow-hidden relative">
         {isLoading ? (
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin" />
-            <p className="text-white text-xl">
+            <div className="relative">
+              <div className="w-16 h-16 border-4 border-gray-700 rounded-full" />
+              <div className="absolute inset-0 w-16 h-16 border-4 border-transparent border-t-blue-500 rounded-full animate-spin" />
+            </div>
+            <p className="text-white text-lg font-medium">
               Loading page {currentPage + 1}...
             </p>
           </div>
@@ -268,15 +289,20 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
           <img
             src={currentImage}
             alt={`Page ${currentPage + 1}`}
-            className="max-w-full max-h-full object-contain select-none"
+            className="max-w-full max-h-full object-contain select-none drop-shadow-2xl"
             draggable={false}
           />
         ) : (
-          <div className="text-white text-xl">No image available</div>
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-16 h-16 rounded-full bg-gray-800 flex items-center justify-center">
+              <X size={32} className="text-gray-600" />
+            </div>
+            <div className="text-gray-400 text-lg">No image available</div>
+          </div>
         )}
 
         <div
-          className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-gray-900/90 backdrop-blur-sm p-3 rounded-lg border border-gray-700/50 shadow-xl transition-all duration-300 ${
+          className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-gray-900/95 backdrop-blur-md p-3 rounded-xl border border-gray-700/50 shadow-2xl transition-all duration-300 ${
             showControls
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4 pointer-events-none"
@@ -284,21 +310,27 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
         >
           <button
             onClick={toggleFullscreen}
-            className="w-10 h-10 flex items-center justify-center hover:bg-gray-800 rounded-md transition-colors focus:outline-none"
+            className="w-10 h-10 flex items-center justify-center hover:bg-gradient-to-br hover:from-blue-500 hover:to-purple-600 rounded-lg transition-all duration-200 focus:outline-none group"
             title={isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"}
             aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
           >
             {isFullscreen ? (
-              <Minimize2 size={20} className="text-white" />
+              <Minimize2
+                size={20}
+                className="text-gray-300 group-hover:text-white"
+              />
             ) : (
-              <Maximize2 size={20} className="text-white" />
+              <Maximize2
+                size={20}
+                className="text-gray-300 group-hover:text-white"
+              />
             )}
           </button>
         </div>
 
         {isFullscreen && (
           <div
-            className={`absolute top-4 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur-sm px-4 py-2 rounded-lg text-white text-sm transition-all duration-300 ${
+            className={`absolute top-4 left-1/2 -translate-x-1/2 bg-gray-900/95 backdrop-blur-md px-5 py-2.5 rounded-xl border border-gray-700/50 shadow-2xl text-white text-sm font-medium transition-all duration-300 ${
               showControls
                 ? "opacity-100 translate-y-0"
                 : "opacity-0 -translate-y-4 pointer-events-none"
@@ -312,10 +344,10 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
       <button
         onClick={previousPage}
         disabled={currentPage === 0}
-        className={`absolute left-4 top-1/2 -translate-y-1/2 bg-gray-900/80 backdrop-blur-sm text-white p-3 rounded-full transition-all z-10  focus:outline-none ${
+        className={`absolute left-4 top-1/2 -translate-y-1/2 bg-gray-900/95 backdrop-blur-md text-white p-3 rounded-full border border-gray-700/50 shadow-2xl transition-all z-10 focus:outline-none ${
           currentPage === 0
             ? "opacity-30 cursor-not-allowed"
-            : "hover:bg-gray-800 hover:scale-110"
+            : "hover:bg-gradient-to-br hover:from-blue-500 hover:to-purple-600 hover:scale-110 hover:border-transparent"
         } ${
           showControls
             ? "opacity-100 translate-x-0"
@@ -323,16 +355,16 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
         }`}
         aria-label="Previous page"
       >
-        <ChevronLeft size={32} />
+        <ChevronLeft size={28} />
       </button>
 
       <button
         onClick={nextPage}
         disabled={currentPage === totalPages - 1}
-        className={`absolute right-4 top-1/2 -translate-y-1/2 bg-gray-900/80 backdrop-blur-sm text-white p-3 rounded-full transition-all z-10  focus:outline-none ${
+        className={`absolute right-4 top-1/2 -translate-y-1/2 bg-gray-900/95 backdrop-blur-md text-white p-3 rounded-full border border-gray-700/50 shadow-2xl transition-all z-10 focus:outline-none ${
           currentPage === totalPages - 1
             ? "opacity-30 cursor-not-allowed"
-            : "hover:bg-gray-800 hover:scale-110"
+            : "hover:bg-gradient-to-br hover:from-blue-500 hover:to-purple-600 hover:scale-110 hover:border-transparent"
         } ${
           showControls
             ? "opacity-100 translate-x-0"
@@ -340,18 +372,28 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
         }`}
         aria-label="Next page"
       >
-        <ChevronRight size={32} />
+        <ChevronRight size={28} />
       </button>
 
       {!isFullscreen && (
-        <div className="bg-gray-900 p-4 flex justify-center gap-2">
+        <div className="bg-gradient-to-r from-gray-900 via-gray-800 to-gray-900 border-t border-gray-800 p-4 flex justify-center gap-2 shadow-lg">
           <input
             type="range"
             min="0"
             max={Math.max(0, totalPages - 1)}
             value={currentPage}
             onChange={(e) => goToPage(parseInt(e.target.value))}
-            className="w-full max-w-2xl cursor-pointer"
+            className="w-full max-w-2xl h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer 
+              [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-4 [&::-webkit-slider-thumb]:h-4 
+              [&::-webkit-slider-thumb]:bg-gradient-to-br [&::-webkit-slider-thumb]:from-blue-500 
+              [&::-webkit-slider-thumb]:to-purple-600 [&::-webkit-slider-thumb]:rounded-full 
+              [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-lg
+              [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:transition-transform
+              [&::-moz-range-thumb]:w-4 [&::-moz-range-thumb]:h-4 [&::-moz-range-thumb]:bg-gradient-to-br 
+              [&::-moz-range-thumb]:from-blue-500 [&::-moz-range-thumb]:to-purple-600 
+              [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:cursor-pointer 
+              [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:shadow-lg
+              [&::-moz-range-thumb]:hover:scale-110 [&::-moz-range-thumb]:transition-transform"
             aria-label="Page slider"
           />
         </div>

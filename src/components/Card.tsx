@@ -119,31 +119,34 @@ export default function Card({
       <div
         onClick={handleClick}
         onContextMenu={handleContextMenu}
-        className="flex flex-col items-center bg-gray-600 rounded-lg w-36 hover:scale-105 hover:bg-gray-700 transition-all duration-200 cursor-pointer"
+        className="group flex flex-col bg-gray-900 rounded-xl overflow-hidden hover:ring-2 hover:ring-blue-500/50 hover:shadow-xl hover:shadow-blue-500/20 transition-all duration-300 cursor-pointer transform hover:-translate-y-1"
       >
-        <div className="relative w-full h-48 bg-gray-700 rounded-t-lg flex items-center justify-center overflow-hidden">
+        <div className="relative w-full aspect-[2/3] bg-gray-800 flex items-center justify-center overflow-hidden">
           {isLoading ? (
             <div className="w-full h-full bg-gray-800 animate-pulse" />
           ) : coverImage ? (
-            <img
-              src={coverImage}
-              alt={comic.comicInfo?.title || fileName}
-              className="w-full h-full object-cover rounded-t-lg"
-            />
+            <>
+              <img
+                src={coverImage}
+                alt={comic.comicInfo?.title || fileName}
+                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            </>
           ) : (
-            <div className="flex flex-col items-center justify-center h-full">
-              <ImageOff size={48} className="text-gray-500" />
-              <p className="text-white text-xs mt-2 px-2 text-center">
+            <div className="flex flex-col items-center justify-center h-full px-3">
+              <ImageOff size={40} className="text-gray-600 mb-2" />
+              <p className="text-gray-500 text-xs text-center line-clamp-2">
                 {comic.comicInfo?.title || fileName}
               </p>
             </div>
           )}
         </div>
-        <div className="text-center p-2">
-          <h2 className="text-white font-bold leading-none text-sm">
+        <div className="p-3 bg-gray-900 border-t border-gray-800">
+          <h2 className="text-white font-semibold text-sm line-clamp-2 mb-1 group-hover:text-blue-400 transition-colors">
             {comic.comicInfo?.title || "Loading..."}
           </h2>
-          <p className="text-white text-xs opacity-75">
+          <p className="text-gray-400 text-xs line-clamp-1">
             {comic.comicInfo?.series || "Unknown"}
           </p>
         </div>
