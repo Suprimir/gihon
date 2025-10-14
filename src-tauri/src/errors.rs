@@ -14,7 +14,7 @@ pub enum AppError {
     #[error("File not found: {path}")]
     FileNotFound { path: String },
 
-    #[error("General error: {message}")]
+    #[error("{message}")]
     General { message: String },
 }
 

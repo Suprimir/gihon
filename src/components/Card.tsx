@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from "react";
 import CardContextMenu from "./modals/CardContextMenu";
 import EditorModal from "./modals/EditorModal";
 import { useAlert } from "../contexts/useAlert";
-import { formatErrorMessage } from "../utils/formatError";
 
 interface CardProps {
   fileName: string;
@@ -43,12 +42,7 @@ export default function Card({
       setComic({ fileName, comicInfo: metadata });
       setCoverImage(cover || "");
     } catch (error) {
-      showAlert(
-        "error",
-        "Error loading comic data",
-        formatErrorMessage(error),
-        5000
-      );
+      showAlert("error", "Error loading comic data", String(error), 5000);
       console.error(`Error loading data for ${fileName}:`, error);
       setComic({ fileName, comicInfo: null });
       setCoverImage("");
@@ -108,6 +102,10 @@ export default function Card({
     onUpdate();
   }, [loadData, onUpdate]);
 
+  const handleDelete = useCallback(() => {
+    onUpdate();
+  }, [onUpdate]);
+
   // ---------------- Effects ----------------
 
   useEffect(() => {
@@ -158,7 +156,7 @@ export default function Card({
         onClose={closeContextMenu}
         comic={comic}
         onEdit={openEditor}
-        onDelete={handleUpdate}
+        onDelete={handleDelete}
       />
 
       <EditorModal

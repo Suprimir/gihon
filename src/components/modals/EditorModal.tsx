@@ -3,7 +3,6 @@ import { Comic } from "../../types";
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAlert } from "../../contexts/useAlert";
-import { formatErrorMessage } from "../../utils/formatError";
 
 interface EditorModalProps {
   comic: Comic;
@@ -41,12 +40,7 @@ export default function EditorModal({
       onUpdate();
       onClose();
     } catch (error) {
-      showAlert(
-        "error",
-        "Error saving metadata",
-        formatErrorMessage(error),
-        5000
-      );
+      showAlert("error", "Error saving metadata", String(error), 5000);
       console.error("Failed to save metadata:", error);
     }
   }, [actualComic, comic, onClose, onUpdate, showAlert]);

@@ -3,7 +3,6 @@ import { Comic } from "../../types";
 import { Pencil, Trash } from "lucide-react";
 import { invoke } from "@tauri-apps/api/core";
 import { useAlert } from "../../contexts/useAlert";
-import { formatErrorMessage } from "../../utils/formatError";
 
 interface CardContextMenuProps {
   x: number;
@@ -45,12 +44,7 @@ export default function CardContextMenu({
     try {
       await invoke("delete_file", { cbzPath: comic.fileName });
     } catch (error) {
-      showAlert(
-        "error",
-        "Error deleting comic",
-        formatErrorMessage(error),
-        5000
-      );
+      showAlert("error", "Error deleting comic", String(error), 5000);
       console.error("Failed to delete comic:", error);
     }
 
@@ -73,7 +67,7 @@ export default function CardContextMenu({
         <li className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-600/50">
           <button onClick={onEdit} className="flex items-center gap-2 w-full">
             <Pencil size={16} />
-            Edit manga
+            Edit comic
           </button>
         </li>
         <li className="flex items-center gap-2 p-2 rounded cursor-pointer hover:bg-gray-600/50">

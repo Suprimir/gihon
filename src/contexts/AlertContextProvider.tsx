@@ -59,7 +59,7 @@ export const AlertProvider = ({ children }: { children: ReactNode }) => {
                   {alert.title}
                 </h4>
                 {alert.message && (
-                  <p className="text-sm mt-1 opacity-90 text-white">
+                  <p className="text-sm mt-1 text-white opacity-90 break-words whitespace-pre-wrap">
                     {alert.message}
                   </p>
                 )}

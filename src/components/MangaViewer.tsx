@@ -9,7 +9,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Comic } from "../types";
 import { useAlert } from "../contexts/useAlert";
-import { formatErrorMessage } from "../utils/formatError";
 
 interface MangaViewerProps {
   comic: Comic | null;
@@ -53,12 +52,8 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
 
         setCache((prevCache) => new Map(prevCache).set(index, imageData));
       } catch (error) {
-        showAlert(
-          "error",
-          "Error loading page",
-          formatErrorMessage(error),
-          5000
-        );
+        showAlert("error", "Error loading page", String(error), 5000);
+        onClose();
         console.error("Error loading page:", error);
       } finally {
         setIsLoading(false);
@@ -80,12 +75,7 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
         });
         setCache((prevCache) => new Map(prevCache).set(index, imageData));
       } catch (error) {
-        showAlert(
-          "error",
-          "Error loading page",
-          formatErrorMessage(error),
-          5000
-        );
+        showAlert("error", "Error loading page", String(error), 5000);
         console.error("Error loading page:", error);
       }
     },

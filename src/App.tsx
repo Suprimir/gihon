@@ -6,7 +6,6 @@ import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { Comic } from "./types";
 import { useAlert } from "./contexts/useAlert";
-import { formatErrorMessage } from "./utils/formatError";
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -29,18 +28,15 @@ function App() {
       try {
         await invoke("add_file", { sourcePath: filePath });
       } catch (error) {
-        showAlert(
-          "error",
-          "Error adding file",
-          formatErrorMessage(error),
-          5000
-        );
+        showAlert("error", "Error adding file", String(error), 3000);
+        console.error("Error adding file:", error);
       }
     },
     [showAlert]
   );
 
   async function refreshFiles() {
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const updatedFiles = await listFiles();
     setFiles(updatedFiles);
   }
@@ -106,7 +102,9 @@ function App() {
           <p className="text-white text-2xl font-bold">
             Drop your manga files here
           </p>
-          <p className="text-gray-300 text-lg mt-2">Supported formats: .cbz</p>
+          <p className="text-gray-300 text-lg mt-2">
+            Supported formats: .cbz, .zip, .cbr, .rar
+          </p>
         </div>
       )}
 
