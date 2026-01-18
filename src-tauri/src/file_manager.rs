@@ -56,6 +56,11 @@ impl FileManager {
         fs::create_dir_all(&folder_path).map_err(|e| e.to_string())?;
 
         let destination_path = folder_path.join(file_name);
+
+        if destination_path.exists() {
+            return Err("File already exists in the library".to_string());
+        }
+
         fs::copy(source_path, &destination_path).map_err(|e| e.to_string())?;
 
         let comic_info =
@@ -188,6 +193,9 @@ impl FileManager {
                     let sub_path = sub_entry.path();
                     if sub_path.is_file()
                         && sub_path.extension().and_then(|s| s.to_str()) == Some("cbz")
+                        || sub_path.extension().and_then(|s| s.to_str()) == Some("zip")
+                        || sub_path.extension().and_then(|s| s.to_str()) == Some("cbr")
+                        || sub_path.extension().and_then(|s| s.to_str()) == Some("rar")
                     {
                         if let Some(file_name) = sub_path.file_name().and_then(|s| s.to_str()) {
                             files.push(file_name.to_string());

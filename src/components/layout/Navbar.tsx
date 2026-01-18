@@ -1,13 +1,18 @@
+import { useCallback } from "react";
+
 interface NavbarProps {
   setSearchTerm?: (term: string) => void;
 }
 
 export default function Navbar({ setSearchTerm }: NavbarProps) {
-  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (setSearchTerm) {
-      setSearchTerm(event.target.value);
-    }
-  };
+  const handleInputChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      if (setSearchTerm) {
+        setSearchTerm(event.target.value);
+      }
+    },
+    [],
+  );
 
   return (
     <nav className="bg-gray-900 p-4 flex flex-row items-center justify-between">

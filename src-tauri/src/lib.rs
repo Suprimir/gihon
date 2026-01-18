@@ -1,13 +1,35 @@
 mod cbz_viewer;
 mod commands;
 mod config_manager;
+mod errors;
 mod file_manager;
+
+use log::info;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
+
+    info!("Starting Gihon...");
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
+        .setup(|app| {
+            info!("App setup complete");
+
+            #[cfg(debug_assertions)]
+            {
+                use tauri::Manager;
+
+                if let Some(window) = app.get_webview_window("main") {
+                    window.open_devtools();
+                    info!("DevTools opened");
+                }
+            }
+
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::load_config,
             commands::save_config,

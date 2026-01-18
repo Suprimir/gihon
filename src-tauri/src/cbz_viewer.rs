@@ -141,6 +141,10 @@ impl CbzViewer {
 
         let images_list = Self::get_image_list(cbz_path)?;
 
+        if images_list.len() == 0 {
+            return Err(format!("No images found in archive: {}", cbz_path));
+        }
+
         let image_name = &images_list[image_index];
 
         for i in 0..archive.len() {

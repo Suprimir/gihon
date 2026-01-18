@@ -5,16 +5,20 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { Manga } from "../types";
+import { Comic } from "../types";
+import { useAlert } from "../contexts/useAlert";
 
 interface MangaViewerProps {
-  manga: Manga | null;
+  comic: Comic | null;
   onClose: () => void;
 }
 
-export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
+const CONTROLS_HIDE_DELAY = 1200;
+const PRELOAD_OFFSET = 1;
+
+export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [currentImage, setCurrentImage] = useState<string | null>(null);
@@ -22,11 +26,15 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
-  const [mouseTimeout, setMouseTimeout] = useState<NodeJS.Timeout | null>(null);
+
+  const mouseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const { showAlert } = useAlert();
+
+  // ---------------- Image Loading and Caching ----------------
 
   const loadPage = useCallback(
     async (index: number) => {
-      if (!manga) return;
+      if (!comic) return;
 
       if (cache.has(index)) {
         setCurrentImage(cache.get(index) || null);
@@ -37,55 +45,115 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
 
       try {
         const imageData = await invoke<string>("load_image_by_index", {
-          cbzPath: manga.fileName,
+          cbzPath: comic.fileName,
           imageIndex: index,
         });
         setCurrentImage(imageData);
 
         setCache((prevCache) => new Map(prevCache).set(index, imageData));
       } catch (error) {
+        showAlert("error", "Error loading page", String(error), 5000);
+        onClose();
         console.error("Error loading page:", error);
       } finally {
         setIsLoading(false);
       }
     },
-    [manga, cache],
+    [comic, cache, showAlert],
   );
 
   const preloadPage = useCallback(
     async (index: number) => {
-      if (!manga) return;
+      if (!comic) return;
 
       if (cache.has(index)) return;
 
       try {
         const imageData = await invoke<string>("load_image_by_index", {
-          cbzPath: manga.fileName,
+          cbzPath: comic.fileName,
           imageIndex: index,
         });
         setCache((prevCache) => new Map(prevCache).set(index, imageData));
       } catch (error) {
+        showAlert("error", "Error loading page", String(error), 5000);
         console.error("Error loading page:", error);
       }
     },
-    [manga, cache],
+    [comic, cache, showAlert],
   );
 
-  useEffect(() => {
-    if (!manga) return;
+  // ---------------- Navigation ----------------
 
-    const loadManga = async () => {
+  const nextPage = useCallback(() => {
+    if (currentPage >= totalPages - 1) return;
+
+    const nextIndex = currentPage + 1;
+    setCurrentPage(nextIndex);
+
+    if (nextIndex + 1 < totalPages) {
+      preloadPage(nextIndex + PRELOAD_OFFSET);
+    }
+  }, [currentPage, totalPages, preloadPage]);
+
+  const previousPage = useCallback(() => {
+    if (currentPage <= 0) return;
+    const previousIndex = currentPage - 1;
+    setCurrentPage(previousIndex);
+
+    if (previousIndex - 1 >= 0) {
+      preloadPage(previousIndex - PRELOAD_OFFSET);
+    }
+  }, [currentPage, preloadPage]);
+
+  const goToPage = useCallback(
+    (page: number) => {
+      if (page < 0 || page >= totalPages) return;
+      setCurrentPage(page);
+    },
+    [totalPages],
+  );
+
+  // ---------------- Fullscreen ----------------
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
+
+  // ---------------- Controls Visibility ----------------
+
+  const handleMouseMove = useCallback(() => {
+    setShowControls(true);
+
+    if (mouseTimeoutRef.current) {
+      clearTimeout(mouseTimeoutRef.current);
+    }
+
+    mouseTimeoutRef.current = setTimeout(() => {
+      setShowControls(false);
+    }, CONTROLS_HIDE_DELAY);
+  }, []);
+
+  // ---------------- Effects ----------------
+
+  // Load manga when it changes (new manga opened)
+  useEffect(() => {
+    if (!comic) return;
+
+    const initializeManga = async () => {
       try {
         setCache(new Map());
         setCurrentImage(null);
         setCurrentPage(0);
 
         const pageCount = await invoke<number>("get_page_count", {
-          cbzPath: manga.fileName,
+          cbzPath: comic.fileName,
         });
 
         setTotalPages(pageCount);
-
         await loadPage(0);
 
         if (pageCount > 1) {
@@ -96,56 +164,52 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
       }
     };
 
-    loadManga();
-  }, [manga?.fileName]);
+    initializeManga();
+  }, [comic?.fileName]);
 
-  // Keyboard navigation
+  // Load current page
+  useEffect(() => {
+    if (currentPage >= 0 && currentPage < totalPages) {
+      loadPage(currentPage);
+    }
+  }, [currentPage, totalPages, loadPage]);
 
+  // Keyboard shortcuts
   useEffect(() => {
     const handleKeyPress = (e: KeyboardEvent) => {
-      if (e.key === "ArrowLeft") previousPage();
-      if (e.key === "ArrowRight") nextPage();
-      if (e.key === "Escape") onClose();
+      switch (e.key) {
+        case "ArrowRight":
+          nextPage();
+          break;
+        case "ArrowLeft":
+          previousPage();
+          break;
+        case "Escape":
+          if (isFullscreen) {
+            toggleFullscreen();
+          } else {
+            onClose();
+          }
+          break;
+        case "f":
+        case "F":
+          toggleFullscreen();
+          break;
+      }
     };
 
     window.addEventListener("keydown", handleKeyPress);
     return () => window.removeEventListener("keydown", handleKeyPress);
-  }, [currentPage]);
+  }, [
+    currentPage,
+    isFullscreen,
+    nextPage,
+    previousPage,
+    onClose,
+    toggleFullscreen,
+  ]);
 
-  const nextPage = () => {
-    if (currentPage < totalPages - 1) {
-      const nextIndex = currentPage + 1;
-      setCurrentPage(nextIndex);
-      loadPage(nextIndex);
-
-      if (nextIndex + 1 < totalPages) {
-        preloadPage(nextIndex + 1);
-      }
-    }
-  };
-
-  const previousPage = () => {
-    if (currentPage > 0) {
-      const previousIndex = currentPage - 1;
-      setCurrentPage(previousIndex);
-      loadPage(previousIndex);
-
-      if (previousIndex - 1 >= 0) {
-        preloadPage(previousIndex - 1);
-      }
-    }
-  };
-
-  const toggleFullscreen = () => {
-    if (!document.fullscreenElement) {
-      document.documentElement.requestFullscreen();
-      setIsFullscreen(true);
-    } else {
-      document.exitFullscreen();
-      setIsFullscreen(false);
-    }
-  };
-
+  // Fullscreen state sync
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -157,34 +221,14 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
   }, []);
 
   useEffect(() => {
-    if (currentPage >= 0 && currentPage < totalPages) {
-      loadPage(currentPage);
-    }
-  }, [currentPage, totalPages]);
+    return () => {
+      if (mouseTimeoutRef.current) {
+        clearTimeout(mouseTimeoutRef.current);
+      }
+    };
+  }, []);
 
-  const handleMouseMove = () => {
-    setShowControls(true);
-
-    if (mouseTimeout) {
-      clearTimeout(mouseTimeout);
-    }
-
-    const timeout = setTimeout(() => {
-      setShowControls(false);
-    }, 1000);
-
-    setMouseTimeout(timeout);
-
-    useEffect(() => {
-      return () => {
-        if (mouseTimeout) {
-          clearTimeout(mouseTimeout);
-        }
-      };
-    }, [mouseTimeout]);
-  };
-
-  if (!manga) return null;
+  if (!comic) return null;
 
   return (
     <div
@@ -194,16 +238,18 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
       {!isFullscreen && (
         <div className="bg-gray-900 p-4 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <h2 className="text-white text-xl font-bold">
-              {manga.comicInfo?.title}
+            <h2 className="text-white text-xl font-bold truncate max-w-md">
+              {comic.comicInfo?.title || "Unknown Title"}
             </h2>
-            <span className="text-gray-400">
-              Page {currentPage + 1} of {totalPages}
+            <span className="text-gray-400 text-sm">
+              {currentPage + 1} / {totalPages}
             </span>
           </div>
           <button
             onClick={onClose}
             className="text-gray-400 hover:text-white transition-colors"
+            title="Close Viewer (Esc)"
+            aria-label="Close Viewer"
           >
             <X size={28} />
           </button>
@@ -212,14 +258,18 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
 
       <div className="flex-1 flex items-center justify-center bg-black overflow-hidden relative">
         {isLoading ? (
-          <div className="text-white text-xl">
-            Loading page {currentPage + 1}...
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin" />
+            <p className="text-white text-xl">
+              Loading page {currentPage + 1}...
+            </p>
           </div>
         ) : currentImage ? (
           <img
             src={currentImage}
             alt={`Page ${currentPage + 1}`}
-            className="max-w-full max-h-full object-contain"
+            className="max-w-full max-h-full object-contain select-none"
+            draggable={false}
           />
         ) : (
           <div className="text-white text-xl">No image available</div>
@@ -234,8 +284,9 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
         >
           <button
             onClick={toggleFullscreen}
-            className="w-10 h-10 flex items-center justify-center hover:bg-gray-800 rounded-md transition-colors"
-            title="Fullscreen"
+            className="w-10 h-10 flex items-center justify-center hover:bg-gray-800 rounded-md transition-colors focus:outline-none"
+            title={isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"}
+            aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
           >
             {isFullscreen ? (
               <Minimize2 size={20} className="text-white" />
@@ -244,16 +295,33 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
             )}
           </button>
         </div>
+
+        {isFullscreen && (
+          <div
+            className={`absolute top-4 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur-sm px-4 py-2 rounded-lg text-white text-sm transition-all duration-300 ${
+              showControls
+                ? "opacity-100 translate-y-0"
+                : "opacity-0 -translate-y-4 pointer-events-none"
+            }`}
+          >
+            Page {currentPage + 1} of {totalPages}
+          </div>
+        )}
       </div>
 
       <button
         onClick={previousPage}
         disabled={currentPage === 0}
-        className={`absolute left-4 top-1/2 -translate-y-1/2 bg-gray-900/80 text-white p-3 rounded-full transition-all ${
+        className={`absolute left-4 top-1/2 -translate-y-1/2 bg-gray-900/80 backdrop-blur-sm text-white p-3 rounded-full transition-all z-10  focus:outline-none ${
           currentPage === 0
             ? "opacity-30 cursor-not-allowed"
-            : "hover:bg-gray-800"
+            : "hover:bg-gray-800 hover:scale-110"
+        } ${
+          showControls
+            ? "opacity-100 translate-x-0"
+            : "opacity-0 -translate-x-4 pointer-events-none"
         }`}
+        aria-label="Previous page"
       >
         <ChevronLeft size={32} />
       </button>
@@ -261,11 +329,16 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
       <button
         onClick={nextPage}
         disabled={currentPage === totalPages - 1}
-        className={`absolute right-4 top-1/2 -translate-y-1/2 bg-gray-900/80 text-white p-3 rounded-full transition-all ${
+        className={`absolute right-4 top-1/2 -translate-y-1/2 bg-gray-900/80 backdrop-blur-sm text-white p-3 rounded-full transition-all z-10  focus:outline-none ${
           currentPage === totalPages - 1
             ? "opacity-30 cursor-not-allowed"
-            : "hover:bg-gray-800"
+            : "hover:bg-gray-800 hover:scale-110"
+        } ${
+          showControls
+            ? "opacity-100 translate-x-0"
+            : "opacity-0 translate-x-4 pointer-events-none"
         }`}
+        aria-label="Next page"
       >
         <ChevronRight size={32} />
       </button>
@@ -275,10 +348,11 @@ export default function MangaViewer({ manga, onClose }: MangaViewerProps) {
           <input
             type="range"
             min="0"
-            max={totalPages - 1}
+            max={Math.max(0, totalPages - 1)}
             value={currentPage}
-            onChange={(e) => setCurrentPage(parseInt(e.target.value))}
-            className="w-96"
+            onChange={(e) => goToPage(parseInt(e.target.value))}
+            className="w-full max-w-2xl cursor-pointer"
+            aria-label="Page slider"
           />
         </div>
       )}

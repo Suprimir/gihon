@@ -1,26 +1,42 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import { Card, MangaViewer, Navbar } from "./components/index";
 import { Upload } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
-import { Manga } from "./types";
+import { Comic } from "./types";
+import { useAlert } from "./contexts/useAlert";
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [files, setFiles] = useState<string[]>([]);
-  const [selectedManga, setSelectedManga] = useState<Manga | null>(null);
+  const [selectedComic, setSelectedComic] = useState<Comic | null>(null);
   const [isDragEntered, setIsDragEntered] = useState(false);
+  const { showAlert } = useAlert();
 
-  async function listFiles(): Promise<string[]> {
-    return await invoke<string[]>("list_files");
-  }
+  const listFiles = useCallback(async (): Promise<string[]> => {
+    try {
+      return await invoke<string[]>("list_files");
+    } catch (error) {
+      console.error("Error listing files:", error);
+      throw new Error("Failed to load manga files");
+    }
+  }, []);
 
-  async function addFile(filePath: string): Promise<void> {
-    await invoke("add_file", { sourcePath: filePath });
-  }
+  const addFile = useCallback(
+    async (filePath: string): Promise<void> => {
+      try {
+        await invoke("add_file", { sourcePath: filePath });
+      } catch (error) {
+        showAlert("error", "Error adding file", String(error), 3000);
+        console.error("Error adding file:", error);
+      }
+    },
+    [showAlert],
+  );
 
   async function refreshFiles() {
+    await new Promise((resolve) => setTimeout(resolve, 100));
     const updatedFiles = await listFiles();
     setFiles(updatedFiles);
   }
@@ -50,13 +66,13 @@ function App() {
 
   const handleFileDrop = async (paths: string[]) => {
     setIsDragEntered(false);
-    const validFiles = paths.filter((path) => path.endsWith(".cbz"));
 
-    for (const file of validFiles) {
-      await addFile(file);
+    try {
+      await Promise.all(paths.map((file) => addFile(file)));
+      await refreshFiles();
+    } catch (error) {
+      console.error("Error adding files:", error);
     }
-
-    await refreshFiles();
   };
 
   return (
@@ -66,7 +82,8 @@ function App() {
       <div className="flex-1 flex flex-row flex-wrap justify-center content-start gap-4 p-4 overflow-y-auto">
         {files.length === 0 && (
           <div className="text-gray-400 text-center mt-20">
-            No manga files found. Drag and drop your .cbz files to get started.
+            No manga files found. Drag and drop your .cbz, .zip, .cbr, .rar
+            files to get started.
           </div>
         )}
         {files.map((fileName) => (
@@ -74,7 +91,7 @@ function App() {
             searchTerm={searchTerm}
             key={fileName}
             fileName={fileName}
-            onClick={(manga: Manga) => setSelectedManga(manga)}
+            onClick={(comic: Comic) => setSelectedComic(comic)}
             onUpdate={refreshFiles}
           />
         ))}
@@ -87,14 +104,14 @@ function App() {
             Drop your manga files here
           </p>
           <p className="text-gray-300 text-lg mt-2">
-            Supported formats: .cbz, .zip
+            Supported formats: .cbz, .zip, .cbr, .rar
           </p>
         </div>
       )}
 
       <MangaViewer
-        manga={selectedManga}
-        onClose={() => setSelectedManga(null)}
+        comic={selectedComic}
+        onClose={() => setSelectedComic(null)}
       />
     </main>
   );

@@ -1,12 +1,12 @@
 import { X } from "lucide-react";
-import { ComicInfo } from "../../types";
-import { useEffect, useState } from "react";
+import { Comic } from "../../types";
+import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAlert } from "../../contexts/useAlert";
 
 interface EditorModalProps {
-  comicInfo: ComicInfo | null;
-  fileName: string;
-  cover: string | null;
+  comic: Comic;
+  cover: string;
   isOpen: boolean;
   onClose: () => void;
   onUpdate: () => void;
@@ -15,28 +15,35 @@ interface EditorModalProps {
 export default function EditorModal({
   isOpen,
   onClose,
-  comicInfo,
-  fileName,
+  comic,
   cover,
   onUpdate,
 }: EditorModalProps) {
-  const [actualComicInfo, setActualComicInfo] = useState<ComicInfo | null>(
-    comicInfo,
-  );
+  const [actualComic, setActualComic] = useState<Comic>(comic);
+  const { showAlert } = useAlert();
+
+  // ---------------- Effects ----------------
 
   useEffect(() => {
-    setActualComicInfo(comicInfo);
-  }, [comicInfo]);
+    setActualComic(comic);
+  }, [comic]);
 
-  const handleUpdate = async () => {
-    await invoke("edit_metadata_file", {
-      comicInfo: actualComicInfo,
-      cbzPath: fileName,
-    });
+  // ---------------- Saving  ----------------
 
-    onUpdate();
-    onClose();
-  };
+  const handleSave = useCallback(async () => {
+    try {
+      await invoke("edit_metadata_file", {
+        comicInfo: actualComic.comicInfo,
+        cbzPath: comic?.fileName,
+      });
+
+      onUpdate();
+      onClose();
+    } catch (error) {
+      showAlert("error", "Error saving metadata", String(error), 5000);
+      console.error("Failed to save metadata:", error);
+    }
+  }, [actualComic, comic, onClose, onUpdate, showAlert]);
 
   if (!isOpen) return null;
 
@@ -51,7 +58,7 @@ export default function EditorModal({
       >
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-white text-xl font-bold">
-            Editar {comicInfo?.title}
+            Edit {comic?.comicInfo?.title}
           </h2>
           <button
             onClick={onClose}
@@ -82,11 +89,14 @@ export default function EditorModal({
                 <input
                   type="text"
                   className="w-full p-2 rounded bg-gray-700 text-white"
-                  value={actualComicInfo?.title || ""}
+                  value={actualComic.comicInfo?.title || ""}
                   onChange={(e) =>
-                    setActualComicInfo({
-                      ...actualComicInfo!,
-                      title: e.target.value,
+                    setActualComic({
+                      ...actualComic,
+                      comicInfo: {
+                        ...actualComic.comicInfo!,
+                        title: e.target.value,
+                      },
                     })
                   }
                 />
@@ -98,11 +108,14 @@ export default function EditorModal({
                 <input
                   type="text"
                   className="w-full p-2 rounded bg-gray-700 text-white"
-                  value={actualComicInfo?.series || ""}
+                  value={actualComic.comicInfo?.series || ""}
                   onChange={(e) => {
-                    setActualComicInfo({
-                      ...actualComicInfo!,
-                      series: e.target.value,
+                    setActualComic({
+                      ...actualComic,
+                      comicInfo: {
+                        ...actualComic.comicInfo!,
+                        series: e.target.value,
+                      },
                     });
                   }}
                 />
@@ -116,11 +129,14 @@ export default function EditorModal({
                 <input
                   type="text"
                   className="w-full p-2 rounded bg-gray-700 text-white"
-                  value={actualComicInfo?.volume || ""}
+                  value={actualComic.comicInfo?.volume || ""}
                   onChange={(e) =>
-                    setActualComicInfo({
-                      ...actualComicInfo!,
-                      volume: e.target.value,
+                    setActualComic({
+                      ...actualComic,
+                      comicInfo: {
+                        ...actualComic.comicInfo!,
+                        volume: e.target.value,
+                      },
                     })
                   }
                 />
@@ -132,11 +148,14 @@ export default function EditorModal({
                 <input
                   type="text"
                   className="w-full p-2 rounded bg-gray-700 text-white"
-                  value={actualComicInfo?.year || ""}
+                  value={actualComic.comicInfo?.year || ""}
                   onChange={(e) =>
-                    setActualComicInfo({
-                      ...actualComicInfo!,
-                      year: e.target.value,
+                    setActualComic({
+                      ...actualComic,
+                      comicInfo: {
+                        ...actualComic.comicInfo!,
+                        year: e.target.value,
+                      },
                     })
                   }
                 />
@@ -149,11 +168,14 @@ export default function EditorModal({
               <input
                 type="text"
                 className="w-full p-2 rounded bg-gray-700 text-white"
-                value={actualComicInfo?.writer || ""}
+                value={actualComic.comicInfo?.writer || ""}
                 onChange={(e) =>
-                  setActualComicInfo({
-                    ...actualComicInfo!,
-                    writer: e.target.value,
+                  setActualComic({
+                    ...actualComic,
+                    comicInfo: {
+                      ...actualComic.comicInfo!,
+                      writer: e.target.value,
+                    },
                   })
                 }
               />
@@ -164,17 +186,20 @@ export default function EditorModal({
               </label>
               <textarea
                 className="w-full h-36 p-2 rounded bg-gray-700 text-white resize-none"
-                value={actualComicInfo?.summary || ""}
+                value={actualComic.comicInfo?.summary || ""}
                 onChange={(e) =>
-                  setActualComicInfo({
-                    ...actualComicInfo!,
-                    summary: e.target.value,
+                  setActualComic({
+                    ...actualComic,
+                    comicInfo: {
+                      ...actualComic.comicInfo!,
+                      summary: e.target.value,
+                    },
                   })
                 }
               />
             </div>
             <button
-              onClick={handleUpdate}
+              onClick={handleSave}
               className="w-full sm:w-auto bg-gray-900 hover:bg-gray-900/70 text-white font-bold py-2 px-4 rounded"
             >
               Save

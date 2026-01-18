@@ -1,8 +1,8 @@
 [package]
 name = "gihon"
 version = "0.1.0"
-description = "A Tauri App"
-authors = ["you"]
+description = "A modern manga/comic reader built with Tauri"
+authors = ["Luis"]
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
@@ -28,4 +28,6 @@ zip = "5.1.1"
 quick-xml = "0.38.3"
 serde-xml-rs = "0.8.1"
 base64 = "0.22.1"
-
+thiserror = "2.0.17"
+log = "0.4.28"
+env_logger = "0.11.8"

@@ -1,11 +1,9 @@
-use tauri::{AppHandle, Manager};
-use std::path::PathBuf;
+use serde::{Deserialize, Serialize};
 use std::fs;
-use serde::{Serialize, Deserialize};
-
+use std::path::PathBuf;
+use tauri::{AppHandle, Manager};
 #[derive(Serialize, Deserialize)]
-pub struct Config {
-}
+pub struct Config {}
 
 // For future configuration options
 
@@ -15,16 +13,15 @@ pub struct ConfigManager {
 
 impl ConfigManager {
     pub fn new(app: &AppHandle) -> Result<Self, String> {
-        let mut config_dir = app
-            .path()
-            .app_config_dir()
-            .map_err(|e| e.to_string())?;
-        
+        let mut config_dir = app.path().app_config_dir().map_err(|e| e.to_string())?;
+
         fs::create_dir_all(&config_dir).map_err(|e| e.to_string())?;
 
         config_dir.push("config.json");
 
-        Ok(Self { config_path: config_dir })
+        Ok(Self {
+            config_path: config_dir,
+        })
     }
 
     pub fn load_config(&self) -> Result<Config, String> {
