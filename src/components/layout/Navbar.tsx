@@ -1,4 +1,5 @@
 import { useCallback } from "react";
+import { Input } from "../ui/input";
 
 interface NavbarProps {
   setSearchTerm?: (term: string) => void;
@@ -15,14 +16,15 @@ export default function Navbar({ setSearchTerm }: NavbarProps) {
   );
 
   return (
-    <nav className="bg-gray-900 p-4 flex flex-row items-center justify-between">
-      <h1 className="text-white text-2xl font-bold">Gihon</h1>
+    <nav className="border-b p-4 flex flex-row items-center justify-between">
+      <h1 className="text-2xl font-bold">Gihon</h1>
       <div className="w-1/2">
         <div className="flex items-center w-full">
-          <input
+          <Input
             type="text"
             placeholder="Search..."
-            className="w-full rounded p-2 bg-gray-950 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-gray-500"
+            className="w-full"
+            onContextMenu={(e) => e.stopPropagation()}
             onChange={handleInputChange}
           />
         </div>

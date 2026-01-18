@@ -5,14 +5,13 @@ import { Upload } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { Comic } from "./types";
-import { useAlert } from "./contexts/useAlert";
+import { toast } from "sonner";
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [files, setFiles] = useState<string[]>([]);
   const [selectedComic, setSelectedComic] = useState<Comic | null>(null);
   const [isDragEntered, setIsDragEntered] = useState(false);
-  const { showAlert } = useAlert();
 
   const listFiles = useCallback(async (): Promise<string[]> => {
     try {
@@ -23,17 +22,14 @@ function App() {
     }
   }, []);
 
-  const addFile = useCallback(
-    async (filePath: string): Promise<void> => {
-      try {
-        await invoke("add_file", { sourcePath: filePath });
-      } catch (error) {
-        showAlert("error", "Error adding file", String(error), 3000);
-        console.error("Error adding file:", error);
-      }
-    },
-    [showAlert],
-  );
+  const addFile = useCallback(async (filePath: string): Promise<void> => {
+    try {
+      await invoke("add_file", { sourcePath: filePath });
+    } catch (error) {
+      toast.error("Error adding file");
+      console.error("Error adding file:", error);
+    }
+  }, []);
 
   async function refreshFiles() {
     await new Promise((resolve) => setTimeout(resolve, 100));
@@ -72,16 +68,17 @@ function App() {
       await refreshFiles();
     } catch (error) {
       console.error("Error adding files:", error);
+      toast.error("Error adding files");
     }
   };
 
   return (
-    <main className="bg-gray-800 w-screen h-screen flex flex-col overflow-hidden relative">
+    <main className="w-screen h-screen flex flex-col overflow-hidden relative">
       <Navbar setSearchTerm={setSearchTerm} />
 
-      <div className="flex-1 flex flex-row flex-wrap justify-center content-start gap-4 p-4 overflow-y-auto">
+      <div className="flex-1 flex flex-row flex-wrap justify-center content-start gap-4 p-4 overflow-y-auto bg-accent">
         {files.length === 0 && (
-          <div className="text-gray-400 text-center mt-20">
+          <div className="text-center mt-20">
             No manga files found. Drag and drop your .cbz, .zip, .cbr, .rar
             files to get started.
           </div>
@@ -98,12 +95,10 @@ function App() {
       </div>
 
       {isDragEntered && (
-        <div className="absolute inset-0 bg-blue-500/20 backdrop-blur-sm border-4 border-dashed border-blue-500 flex flex-col items-center justify-center z-50 pointer-events-none">
-          <Upload size={80} className="text-blue-500 mb-4 animate-bounce" />
-          <p className="text-white text-2xl font-bold">
-            Drop your manga files here
-          </p>
-          <p className="text-gray-300 text-lg mt-2">
+        <div className="absolute inset-0 backdrop-blur-sm border-4 border-dashed flex flex-col items-center justify-center z-50 pointer-events-none">
+          <Upload size={80} className="mb-4 animate-bounce" />
+          <p className="text-2xl font-bold">Drop your manga files here</p>
+          <p className="text-lg mt-2">
             Supported formats: .cbz, .zip, .cbr, .rar
           </p>
         </div>

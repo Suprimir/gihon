@@ -8,7 +8,15 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Comic } from "../types";
-import { useAlert } from "../contexts/useAlert";
+import { Button } from "./ui/button";
+import { Slider } from "./ui/slider";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "./ui/tooltip";
+import { toast } from "sonner";
 
 interface MangaViewerProps {
   comic: Comic | null;
@@ -28,7 +36,6 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   const [showControls, setShowControls] = useState(true);
 
   const mouseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const { showAlert } = useAlert();
 
   // ---------------- Image Loading and Caching ----------------
 
@@ -52,14 +59,14 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
 
         setCache((prevCache) => new Map(prevCache).set(index, imageData));
       } catch (error) {
-        showAlert("error", "Error loading page", String(error), 5000);
+        toast.error("Error loading page");
         onClose();
         console.error("Error loading page:", error);
       } finally {
         setIsLoading(false);
       }
     },
-    [comic, cache, showAlert],
+    [comic, cache],
   );
 
   const preloadPage = useCallback(
@@ -75,11 +82,11 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
         });
         setCache((prevCache) => new Map(prevCache).set(index, imageData));
       } catch (error) {
-        showAlert("error", "Error loading page", String(error), 5000);
+        toast.error("Error loading page");
         console.error("Error loading page:", error);
       }
     },
-    [comic, cache, showAlert],
+    [comic, cache],
   );
 
   // ---------------- Navigation ----------------
@@ -233,36 +240,38 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   return (
     <div
       onMouseMove={handleMouseMove}
-      className="fixed inset-0 bg-black z-50 flex flex-col"
+      className="fixed inset-0 z-50 flex flex-col"
     >
       {!isFullscreen && (
-        <div className="bg-gray-900 p-4 flex justify-between items-center">
+        <div className="p-4 flex justify-between items-center bg-background">
           <div className="flex items-center gap-4">
-            <h2 className="text-white text-xl font-bold truncate max-w-md">
+            <h2 className="text-xl font-bold truncate max-w-md">
               {comic.comicInfo?.title || "Unknown Title"}
             </h2>
-            <span className="text-gray-400 text-sm">
+            <span className="text-sm">
               {currentPage + 1} / {totalPages}
             </span>
           </div>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-            title="Close Viewer (Esc)"
-            aria-label="Close Viewer"
-          >
-            <X size={28} />
-          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={onClose} variant="ghost" size="icon">
+                  <X size={28} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Close Viewer (Esc)</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       )}
 
-      <div className="flex-1 flex items-center justify-center bg-black overflow-hidden relative">
+      <div className="flex-1 flex items-center justify-center overflow-hidden relative bg-accent">
         {isLoading ? (
           <div className="flex flex-col items-center gap-4">
-            <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin" />
-            <p className="text-white text-xl">
-              Loading page {currentPage + 1}...
-            </p>
+            <div className="w-16 h-16 border-4 rounded-full animate-spin" />
+            <p className="text-xl">Loading page {currentPage + 1}...</p>
           </div>
         ) : currentImage ? (
           <img
@@ -272,33 +281,37 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
             draggable={false}
           />
         ) : (
-          <div className="text-white text-xl">No image available</div>
+          <div className="text-xl">No image available</div>
         )}
 
         <div
-          className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 bg-gray-900/90 backdrop-blur-sm p-3 rounded-lg border border-gray-700/50 shadow-xl transition-all duration-300 ${
+          className={`absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 p-3 rounded-lg shadow-xl transition-all duration-300 bg-accent ${
             showControls
               ? "opacity-100 translate-y-0"
               : "opacity-0 translate-y-4 pointer-events-none"
           }`}
         >
-          <button
-            onClick={toggleFullscreen}
-            className="w-10 h-10 flex items-center justify-center hover:bg-gray-800 rounded-md transition-colors focus:outline-none"
-            title={isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"}
-            aria-label={isFullscreen ? "Exit Fullscreen" : "Enter Fullscreen"}
-          >
-            {isFullscreen ? (
-              <Minimize2 size={20} className="text-white" />
-            ) : (
-              <Maximize2 size={20} className="text-white" />
-            )}
-          </button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button onClick={toggleFullscreen} variant="ghost" size="icon">
+                  {isFullscreen ? (
+                    <Minimize2 size={20} />
+                  ) : (
+                    <Maximize2 size={20} />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
 
         {isFullscreen && (
           <div
-            className={`absolute top-4 left-1/2 -translate-x-1/2 bg-gray-900/90 backdrop-blur-sm px-4 py-2 rounded-lg text-white text-sm transition-all duration-300 ${
+            className={`absolute top-4 left-1/2 -translate-x-1/2 backdrop-blur-sm px-4 py-2 rounded-lg text-sm transition-all duration-300 ${
               showControls
                 ? "opacity-100 translate-y-0"
                 : "opacity-0 -translate-y-4 pointer-events-none"
@@ -309,48 +322,62 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
         )}
       </div>
 
-      <button
+      <Button
         onClick={previousPage}
         disabled={currentPage === 0}
-        className={`absolute left-4 top-1/2 -translate-y-1/2 bg-gray-900/80 backdrop-blur-sm text-white p-3 rounded-full transition-all z-10  focus:outline-none ${
+        variant="ghost"
+        size="icon-lg"
+        style={
+          !showControls
+            ? {
+                opacity: 0,
+                transform: "translateX(-1rem) translateY(-50%)",
+                pointerEvents: "none",
+              }
+            : {}
+        }
+        className={`absolute left-4 top-1/2 -translate-y-1/2 p-3 rounded-full transition-all z-10 ${
           currentPage === 0
             ? "opacity-30 cursor-not-allowed"
-            : "hover:bg-gray-800 hover:scale-110"
-        } ${
-          showControls
-            ? "opacity-100 translate-x-0"
-            : "opacity-0 -translate-x-4 pointer-events-none"
+            : "hover:scale-110"
         }`}
         aria-label="Previous page"
       >
         <ChevronLeft size={32} />
-      </button>
+      </Button>
 
-      <button
+      <Button
         onClick={nextPage}
         disabled={currentPage === totalPages - 1}
-        className={`absolute right-4 top-1/2 -translate-y-1/2 bg-gray-900/80 backdrop-blur-sm text-white p-3 rounded-full transition-all z-10  focus:outline-none ${
+        variant="ghost"
+        size="icon-lg"
+        style={
+          !showControls
+            ? {
+                opacity: 0,
+                transform: "translateX(1rem) translateY(-50%)",
+                pointerEvents: "none",
+              }
+            : {}
+        }
+        className={`absolute right-4 top-1/2 -translate-y-1/2 p-3 rounded-full transition-all z-10 ${
           currentPage === totalPages - 1
             ? "opacity-30 cursor-not-allowed"
-            : "hover:bg-gray-800 hover:scale-110"
-        } ${
-          showControls
-            ? "opacity-100 translate-x-0"
-            : "opacity-0 translate-x-4 pointer-events-none"
+            : "hover:scale-110"
         }`}
         aria-label="Next page"
       >
         <ChevronRight size={32} />
-      </button>
+      </Button>
 
       {!isFullscreen && (
-        <div className="bg-gray-900 p-4 flex justify-center gap-2">
-          <input
-            type="range"
-            min="0"
+        <div className="p-4 flex justify-center gap-2 bg-background">
+          <Slider
+            min={0}
             max={Math.max(0, totalPages - 1)}
-            value={currentPage}
-            onChange={(e) => goToPage(parseInt(e.target.value))}
+            step={1}
+            value={[currentPage]}
+            onValueChange={(value) => goToPage(value[0])}
             className="w-full max-w-2xl cursor-pointer"
             aria-label="Page slider"
           />

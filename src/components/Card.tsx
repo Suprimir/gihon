@@ -4,7 +4,8 @@ import { invoke } from "@tauri-apps/api/core";
 import { useCallback, useEffect, useState } from "react";
 import CardContextMenu from "./modals/CardContextMenu";
 import EditorModal from "./modals/EditorModal";
-import { useAlert } from "../contexts/useAlert";
+import { Card as ShadCard, CardContent, CardHeader } from "./ui/card";
+import { toast } from "sonner";
 
 interface CardProps {
   fileName: string;
@@ -23,12 +24,6 @@ export default function Card({
   const [coverImage, setCoverImage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
   const [editorModal, setEditorModal] = useState(false);
-  const [contextMenu, setContextMenu] = useState({
-    visible: false,
-    x: 0,
-    y: 0,
-  });
-  const { showAlert } = useAlert();
 
   // ---------------- Data loading ----------------
 
@@ -42,14 +37,14 @@ export default function Card({
       setComic({ fileName, comicInfo: metadata });
       setCoverImage(cover || "");
     } catch (error) {
-      showAlert("error", "Error loading comic data", String(error), 5000);
+      toast.error("Error loading comic data");
       console.error(`Error loading data for ${fileName}:`, error);
       setComic({ fileName, comicInfo: null });
       setCoverImage("");
     } finally {
       setIsLoading(false);
     }
-  }, [fileName, showAlert]);
+  }, [fileName]);
 
   // ---------------- Search filtering ----------------
 
@@ -73,25 +68,9 @@ export default function Card({
     if (comic && !isLoading) onClick(comic);
   }, [comic, isLoading, onClick]);
 
-  const handleContextMenu = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    setContextMenu({
-      visible: true,
-      x: e.clientX,
-      y: e.clientY,
-    });
-  }, []);
-
-  const closeContextMenu = useCallback(() => {
-    setContextMenu({ ...contextMenu, visible: false });
-  }, [contextMenu]);
-
   const openEditor = useCallback(() => {
     setEditorModal(true);
-    closeContextMenu();
-  }, [closeContextMenu]);
+  }, []);
 
   const closeEditor = useCallback(() => {
     setEditorModal(false);
@@ -116,48 +95,45 @@ export default function Card({
 
   return (
     <>
-      <div
-        onClick={handleClick}
-        onContextMenu={handleContextMenu}
-        className="flex flex-col items-center bg-gray-600 rounded-lg w-36 hover:scale-105 hover:bg-gray-700 transition-all duration-200 cursor-pointer"
-      >
-        <div className="relative w-full h-48 bg-gray-700 rounded-t-lg flex items-center justify-center overflow-hidden">
-          {isLoading ? (
-            <div className="w-full h-full bg-gray-800 animate-pulse" />
-          ) : coverImage ? (
-            <img
-              src={coverImage}
-              alt={comic.comicInfo?.title || fileName}
-              className="w-full h-full object-cover rounded-t-lg"
-            />
-          ) : (
-            <div className="flex flex-col items-center justify-center h-full">
-              <ImageOff size={48} className="text-gray-500" />
-              <p className="text-white text-xs mt-2 px-2 text-center">
-                {comic.comicInfo?.title || fileName}
-              </p>
-            </div>
-          )}
-        </div>
-        <div className="text-center p-2">
-          <h2 className="text-white font-bold leading-none text-sm">
-            {comic.comicInfo?.title || "Loading..."}
-          </h2>
-          <p className="text-white text-xs opacity-75">
-            {comic.comicInfo?.series || "Unknown"}
-          </p>
-        </div>
-      </div>
-
       <CardContextMenu
-        x={contextMenu.x}
-        y={contextMenu.y}
-        visible={contextMenu.visible}
-        onClose={closeContextMenu}
         comic={comic}
         onEdit={openEditor}
         onDelete={handleDelete}
-      />
+      >
+        <ShadCard
+          onClick={handleClick}
+          className="w-36 hover:scale-105 p-0 gap-0 transition-all duration-200 cursor-pointer"
+        >
+          <CardHeader className="p-0 gap-0">
+            <div className="relative w-full h-48 rounded-t-lg flex items-center justify-center overflow-hidden">
+              {isLoading ? (
+                <div className="w-full h-full animate-pulse" />
+              ) : coverImage ? (
+                <img
+                  src={coverImage}
+                  alt={comic.comicInfo?.title || fileName}
+                  className="w-full h-full object-cover rounded-t-xl"
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center h-full gap-2">
+                  <ImageOff size={48} />
+                  <p className="text-xs mt-2 px-3 text-center">
+                    {comic.comicInfo?.title || fileName}
+                  </p>
+                </div>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent className="text-center px-2 py-1.5">
+            <h2 className="font-bold leading-tight text-sm line-clamp-2">
+              {comic.comicInfo?.title || "Loading..."}
+            </h2>
+            <p className="text-xs mt-0.5">
+              {comic.comicInfo?.writer || "Unknown"}
+            </p>
+          </CardContent>
+        </ShadCard>
+      </CardContextMenu>
 
       <EditorModal
         key={`${fileName}-${editorModal}`}

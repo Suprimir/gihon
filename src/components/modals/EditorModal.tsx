@@ -1,8 +1,12 @@
-import { X } from "lucide-react";
 import { Comic } from "../../types";
 import { useCallback, useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { useAlert } from "../../contexts/useAlert";
+import { Button } from "../ui/button";
+import { Textarea } from "../ui/textarea";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../ui/dialog";
+import { Input } from "../ui/input";
+import { Label } from "../ui/label";
+import { toast } from "sonner";
 
 interface EditorModalProps {
   comic: Comic;
@@ -20,7 +24,6 @@ export default function EditorModal({
   onUpdate,
 }: EditorModalProps) {
   const [actualComic, setActualComic] = useState<Comic>(comic);
-  const { showAlert } = useAlert();
 
   // ---------------- Effects ----------------
 
@@ -40,33 +43,19 @@ export default function EditorModal({
       onUpdate();
       onClose();
     } catch (error) {
-      showAlert("error", "Error saving metadata", String(error), 5000);
+      toast.error("Error saving metadata");
       console.error("Failed to save metadata:", error);
     }
-  }, [actualComic, comic, onClose, onUpdate, showAlert]);
-
-  if (!isOpen) return null;
+  }, [actualComic, comic, onClose, onUpdate]);
 
   return (
-    <div
-      className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50"
-      onClick={onClose}
-    >
-      <div
-        className="bg-gray-800 rounded-lg p-4 md:p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex justify-between items-center mb-4">
-          <h2 className="text-white text-xl font-bold">
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="min-w-[55rem] max-h-[90vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle className="text-xl font-bold">
             Edit {comic?.comicInfo?.title}
-          </h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <X size={24} />
-          </button>
-        </div>
+          </DialogTitle>
+        </DialogHeader>
         <div className="flex flex-col lg:flex-row items-start gap-4 md:gap-6">
           <div className="w-full lg:w-1/3 flex-shrink-0">
             <img
@@ -74,7 +63,7 @@ export default function EditorModal({
               className="w-full max-w-xs lg:max-w-none mx-auto rounded-lg object-cover"
             />
             <div>
-              <p className="text-gray-400 text-sm mt-2 break-all">
+              <p className="text-sm mt-2 break-all">
                 The metadata is only for display in the app and is not applied
                 to the metadata files built into the CBZ file.
               </p>
@@ -83,12 +72,16 @@ export default function EditorModal({
           <div className="w-full flex flex-col gap-4">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="w-full sm:w-1/2">
-                <label className="text-white font-bold text-sm md:text-base block mb-2">
+                <Label
+                  htmlFor="title"
+                  className="font-bold text-sm md:text-base"
+                >
                   Title
-                </label>
-                <input
+                </Label>
+                <Input
+                  id="title"
                   type="text"
-                  className="w-full p-2 rounded bg-gray-700 text-white"
+                  className="w-full"
                   value={actualComic.comicInfo?.title || ""}
                   onChange={(e) =>
                     setActualComic({
@@ -102,12 +95,16 @@ export default function EditorModal({
                 />
               </div>
               <div className="w-full sm:w-1/2">
-                <label className="text-white font-bold text-sm md:text-base block mb-2">
+                <Label
+                  htmlFor="series"
+                  className="font-bold text-sm md:text-base"
+                >
                   Series
-                </label>
-                <input
+                </Label>
+                <Input
+                  id="series"
                   type="text"
-                  className="w-full p-2 rounded bg-gray-700 text-white"
+                  className="w-full"
                   value={actualComic.comicInfo?.series || ""}
                   onChange={(e) => {
                     setActualComic({
@@ -123,12 +120,16 @@ export default function EditorModal({
             </div>
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="w-full sm:w-1/2">
-                <label className="text-white font-bold text-sm md:text-base block mb-2">
+                <Label
+                  htmlFor="volume"
+                  className="font-bold text-sm md:text-base"
+                >
                   Volume
-                </label>
-                <input
+                </Label>
+                <Input
+                  id="volume"
                   type="text"
-                  className="w-full p-2 rounded bg-gray-700 text-white"
+                  className="w-full"
                   value={actualComic.comicInfo?.volume || ""}
                   onChange={(e) =>
                     setActualComic({
@@ -142,12 +143,16 @@ export default function EditorModal({
                 />
               </div>
               <div className="w-full sm:w-1/2">
-                <label className="text-white font-bold text-sm md:text-base block mb-2">
+                <Label
+                  htmlFor="year"
+                  className="font-bold text-sm md:text-base"
+                >
                   Year
-                </label>
-                <input
+                </Label>
+                <Input
+                  id="year"
                   type="text"
-                  className="w-full p-2 rounded bg-gray-700 text-white"
+                  className="w-full"
                   value={actualComic.comicInfo?.year || ""}
                   onChange={(e) =>
                     setActualComic({
@@ -162,12 +167,16 @@ export default function EditorModal({
               </div>
             </div>
             <div>
-              <label className="text-white font-bold text-sm md:text-base block mb-2">
+              <Label
+                htmlFor="writer"
+                className="font-bold text-sm md:text-base"
+              >
                 Writer
-              </label>
-              <input
+              </Label>
+              <Input
+                id="writer"
                 type="text"
-                className="w-full p-2 rounded bg-gray-700 text-white"
+                className="w-full"
                 value={actualComic.comicInfo?.writer || ""}
                 onChange={(e) =>
                   setActualComic({
@@ -181,11 +190,15 @@ export default function EditorModal({
               />
             </div>
             <div>
-              <label className="text-white font-bold text-sm md:text-base block mb-2">
+              <Label
+                htmlFor="summary"
+                className="font-bold text-sm md:text-base"
+              >
                 Summary
-              </label>
-              <textarea
-                className="w-full h-36 p-2 rounded bg-gray-700 text-white resize-none"
+              </Label>
+              <Textarea
+                id="summary"
+                className="w-full h-36 resize-none"
                 value={actualComic.comicInfo?.summary || ""}
                 onChange={(e) =>
                   setActualComic({
@@ -198,15 +211,15 @@ export default function EditorModal({
                 }
               />
             </div>
-            <button
+            <Button
               onClick={handleSave}
-              className="w-full sm:w-auto bg-gray-900 hover:bg-gray-900/70 text-white font-bold py-2 px-4 rounded"
+              className="w-full sm:w-auto font-bold py-2 px-4 rounded"
             >
               Save
-            </button>
+            </Button>
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
