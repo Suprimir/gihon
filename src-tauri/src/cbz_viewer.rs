@@ -1,17 +1,23 @@
-use std::fs::File;
-use std::io::{BufReader, Read};
-use serde::{Serialize, Deserialize};
-use zip::ZipArchive;
 use base64::engine::general_purpose;
 use base64::Engine;
+use serde::{Deserialize, Serialize};
+use std::fs::File;
+use std::io::{BufReader, Read};
+use zip::ZipArchive;
 
 #[derive(Serialize, Deserialize)]
 pub struct ComicInfo {
     pub title: String,
     pub series: String,
-    pub writer: String,
+    pub number: String,
+    pub volume: String,
     pub summary: String,
     pub year: String,
+    pub month: String,
+    pub day: String,
+    pub writer: String,
+    pub publisher: String,
+    pub page_count: String,
 }
 
 pub struct CbzViewer;
@@ -27,7 +33,8 @@ impl CbzViewer {
 
     pub fn read_comic_info(cbz_path: &str) -> Result<ComicInfo, String> {
         let file = File::open(cbz_path).map_err(|e| e.to_string())?;
-        let mut archive: ZipArchive<BufReader<File>> = ZipArchive::new(BufReader::new(file)).map_err(|e| e.to_string())?;
+        let mut archive: ZipArchive<BufReader<File>> =
+            ZipArchive::new(BufReader::new(file)).map_err(|e| e.to_string())?;
 
         for i in 0..archive.len() {
             let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
@@ -35,20 +42,35 @@ impl CbzViewer {
 
             if name.ends_with("comicinfo.xml") {
                 let mut contents = String::new();
-                file.read_to_string(&mut contents).map_err(|e| e.to_string())?;
+                file.read_to_string(&mut contents)
+                    .map_err(|e| e.to_string())?;
 
                 let title = Self::extract_tag_value(&contents, "Title").unwrap_or_default();
                 let series = Self::extract_tag_value(&contents, "Series").unwrap_or_default();
-                let writer = Self::extract_tag_value(&contents, "Writer").unwrap_or_default();
+                let number = Self::extract_tag_value(&contents, "Number").unwrap_or_default();
+                let volume: String =
+                    Self::extract_tag_value(&contents, "Volume").unwrap_or_default();
                 let summary = Self::extract_tag_value(&contents, "Summary").unwrap_or_default();
                 let year: String = Self::extract_tag_value(&contents, "Year").unwrap_or_default();
+                let month: String = Self::extract_tag_value(&contents, "Month").unwrap_or_default();
+                let day: String = Self::extract_tag_value(&contents, "Day").unwrap_or_default();
+                let writer = Self::extract_tag_value(&contents, "Writer").unwrap_or_default();
+                let publisher = Self::extract_tag_value(&contents, "Publisher").unwrap_or_default();
+                let page_count: String =
+                    Self::extract_tag_value(&contents, "PageCount").unwrap_or_default();
 
                 return Ok(ComicInfo {
                     title,
                     series,
-                    writer,
+                    number,
+                    volume,
                     summary,
                     year,
+                    month,
+                    day,
+                    writer,
+                    publisher,
+                    page_count,
                 });
             }
         }
@@ -60,7 +82,7 @@ impl CbzViewer {
         let file = File::open(cbz_path).map_err(|e| e.to_string())?;
         let mut archive = ZipArchive::new(BufReader::new(file)).map_err(|e| e.to_string())?;
         let mut archives = Vec::new();
-        
+
         for i in 0..archive.len() {
             let file = archive.by_index(i).map_err(|e| e.to_string())?;
             archives.push(file.name().to_string());
@@ -76,8 +98,13 @@ impl CbzViewer {
                 let mut buffer = Vec::new();
                 file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
                 let encoded = general_purpose::STANDARD.encode(buffer);
-                return Ok(Some(format!("data:image/{};base64,{}", 
-                    if name_lower.ends_with(".png") { "png" } else { "jpeg" },
+                return Ok(Some(format!(
+                    "data:image/{};base64,{}",
+                    if name_lower.ends_with(".png") {
+                        "png"
+                    } else {
+                        "jpeg"
+                    },
                     encoded
                 )));
             }
@@ -96,7 +123,8 @@ impl CbzViewer {
         entries.sort_by_key(|&i| archive.by_index(i).unwrap().name().to_lowercase());
 
         for i in entries {
-            let file: zip::read::ZipFile<'_, BufReader<File>> = archive.by_index(i).map_err(|e| e.to_string())?;
+            let file: zip::read::ZipFile<'_, BufReader<File>> =
+                archive.by_index(i).map_err(|e| e.to_string())?;
             let name = file.name().to_lowercase();
 
             if name.ends_with(".jpg") || name.ends_with(".png") {
@@ -120,9 +148,9 @@ impl CbzViewer {
 
             if file.name() == image_name {
                 let mut buffer = Vec::new();
-                file.read_to_end( &mut buffer).map_err(|e| e.to_string())?;
+                file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
                 let encoded = general_purpose::STANDARD.encode(buffer);
-                
+
                 let name_lower = image_name.to_lowercase();
                 let mime_type = if name_lower.ends_with(".png") {
                     "png"

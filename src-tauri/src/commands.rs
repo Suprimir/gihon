@@ -1,10 +1,10 @@
-use tauri::command;
-use crate::file_manager::FileManager;
-use crate::config_manager::{Config, ConfigManager};
 use crate::cbz_viewer::{CbzViewer, ComicInfo};
-use std::fs;
+use crate::config_manager::{Config, ConfigManager};
+use crate::file_manager::FileManager;
 use base64::engine::general_purpose;
 use base64::Engine;
+use std::fs;
+use tauri::command;
 
 #[command]
 pub fn load_config(app_handle: tauri::AppHandle) -> Result<Config, String> {
@@ -32,21 +32,28 @@ pub fn list_files(app_handle: tauri::AppHandle) -> Result<Vec<String>, String> {
 }
 
 #[command]
-pub fn read_comic_info(app_handle: tauri::AppHandle, cbz_path: String) -> Result<ComicInfo, String> {
+pub fn read_comic_info(
+    app_handle: tauri::AppHandle,
+    cbz_path: String,
+) -> Result<ComicInfo, String> {
     let fm = FileManager::new(&app_handle)?;
-    let full_path = fm.get_full_path(&cbz_path)?.to_str().ok_or("Invalid path")?.to_string();
+    let full_path = fm
+        .get_full_path(&cbz_path)?
+        .to_str()
+        .ok_or("Invalid path")?
+        .to_string();
     CbzViewer::read_comic_info(&full_path)
 }
 
 #[command]
 pub fn get_metadata(app_handle: tauri::AppHandle, cbz_path: String) -> Result<ComicInfo, String> {
     let fm = FileManager::new(&app_handle)?;
-    
+
     let file_stem = std::path::Path::new(&cbz_path)
         .file_stem()
         .and_then(|s| s.to_str())
         .ok_or("Invalid file name")?;
-    
+
     let metadata_file = fm.directory.join(file_stem).join("metadata.json");
     let comic_info = if metadata_file.exists() {
         let metadata_data = std::fs::read_to_string(&metadata_file)
@@ -57,46 +64,53 @@ pub fn get_metadata(app_handle: tauri::AppHandle, cbz_path: String) -> Result<Co
         let full_path = fm.get_full_path(&cbz_path)?;
         CbzViewer::read_comic_info(full_path.to_str().ok_or("Invalid path")?)?
     };
-    
+
     Ok(comic_info)
 }
 
 #[command]
-pub fn get_cover_image(app_handle: tauri::AppHandle, cbz_path: String) -> Result<Option<String>, String> {
+pub fn get_cover_image(
+    app_handle: tauri::AppHandle,
+    cbz_path: String,
+) -> Result<Option<String>, String> {
     let fm = FileManager::new(&app_handle)?;
-    
+
     let file_stem = std::path::Path::new(&cbz_path)
         .file_stem()
         .and_then(|s| s.to_str())
         .ok_or("Invalid file name")?;
-    
+
     let cover_extensions = vec!["jpg", "jpeg", "png", "webp"];
-    
+
     for ext in &cover_extensions {
         let cover_path = fm.directory.join(file_stem).join(format!("cover.{}", ext));
         if cover_path.exists() {
-            let image_data = fs::read(&cover_path)
-                .map_err(|e| format!("Failed to read cover image: {}", e))?;
-            
+            let image_data =
+                fs::read(&cover_path).map_err(|e| format!("Failed to read cover image: {}", e))?;
+
             let base64_image = general_purpose::STANDARD.encode(&image_data);
-            
+
             let mime_type = match ext.as_ref() {
                 "png" => "image/png",
                 "webp" => "image/webp",
                 _ => "image/jpeg",
             };
-            
+
             return Ok(Some(format!("data:{};base64,{}", mime_type, base64_image)));
         }
     }
-    
+
     Ok(None)
 }
 
 #[command]
-pub fn load_image_by_index(app_handle: tauri::AppHandle, cbz_path: String, image_index: usize) -> Result<String, String> {
+pub fn load_image_by_index(
+    app_handle: tauri::AppHandle,
+    cbz_path: String,
+    image_index: usize,
+) -> Result<String, String> {
     let fm = FileManager::new(&app_handle)?;
-    let full_path = fm.get_full_path(&cbz_path)?;    
+    let full_path = fm.get_full_path(&cbz_path)?;
     CbzViewer::load_image_by_index(full_path.to_str().ok_or("Invalid path")?, image_index)
 }
 
@@ -106,4 +120,22 @@ pub fn get_page_count(app_handle: tauri::AppHandle, cbz_path: String) -> Result<
     let full_path = fm.get_full_path(&cbz_path)?;
     let image_list = CbzViewer::get_image_list(full_path.to_str().ok_or("Invalid path")?)?;
     Ok(image_list.len())
+}
+
+#[command]
+pub fn delete_file(app_handle: tauri::AppHandle, cbz_path: String) -> Result<(), String> {
+    let fm = FileManager::new(&app_handle)?;
+    fm.delete_file(&cbz_path)?;
+    Ok(())
+}
+
+#[command]
+pub fn edit_metadata_file(
+    app_handle: tauri::AppHandle,
+    cbz_path: String,
+    comic_info: ComicInfo,
+) -> Result<(), String> {
+    let fm = FileManager::new(&app_handle)?;
+    fm.edit_metadata_file(&cbz_path, &comic_info)?;
+    Ok(())
 }
