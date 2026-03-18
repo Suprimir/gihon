@@ -5,7 +5,13 @@ import {
   Maximize2,
   Minimize2,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Comic } from "../types";
 import { Button } from "./ui/button";
@@ -38,6 +44,7 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
     useState(false);
 
   const mouseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const viewerRef = useRef<HTMLDivElement | null>(null);
 
   // ---------------- Image Loading and Caching ----------------
 
@@ -125,6 +132,9 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   // ---------------- Fullscreen ----------------
 
   const toggleFullscreen = useCallback(() => {
+    console.log(typeof comic);
+    if (comic === null) return;
+
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen();
     } else {
@@ -150,6 +160,15 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
     setShowControls(true);
     scheduleControlsHide();
   }, [scheduleControlsHide]);
+
+  const handleViewerKeyDown = useCallback(
+    (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      if (e.key === "f" || e.key === "F") {
+        toggleFullscreen();
+      }
+    },
+    [toggleFullscreen],
+  );
 
   // ---------------- Effects ----------------
 
@@ -205,10 +224,6 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
             onClose();
           }
           break;
-        case "f":
-        case "F":
-          toggleFullscreen();
-          break;
       }
     };
 
@@ -222,6 +237,11 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
     onClose,
     toggleFullscreen,
   ]);
+
+  useEffect(() => {
+    if (!comic) return;
+    viewerRef.current?.focus();
+  }, [comic]);
 
   // Fullscreen state sync
   useEffect(() => {
@@ -258,6 +278,9 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
 
   return (
     <div
+      ref={viewerRef}
+      tabIndex={0}
+      onKeyDown={handleViewerKeyDown}
       onMouseMove={handleMouseMove}
       className="fixed inset-0 z-50 flex flex-col"
     >
