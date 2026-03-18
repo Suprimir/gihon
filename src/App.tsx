@@ -79,7 +79,7 @@ function App() {
       <div className="flex-1 flex flex-row flex-wrap justify-center content-start gap-4 p-4 overflow-y-auto bg-accent">
         {files.length === 0 && (
           <div className="text-center mt-20">
-            No manga files found. Drag and drop your .cbz, .zip, .cbr, .rar
+            No comic files found. Drag and drop your .cbz, .zip, .cbr, .rar
             files to get started.
           </div>
         )}
@@ -97,7 +97,7 @@ function App() {
       {isDragEntered && (
         <div className="absolute inset-0 backdrop-blur-sm border-4 border-dashed flex flex-col items-center justify-center z-50 pointer-events-none">
           <Upload size={80} className="mb-4 animate-bounce" />
-          <p className="text-2xl font-bold">Drop your manga files here</p>
+          <p className="text-2xl font-bold">Drop your comic files here</p>
           <p className="text-lg mt-2">
             Supported formats: .cbz, .zip, .cbr, .rar
           </p>

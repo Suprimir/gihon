@@ -34,6 +34,8 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showControls, setShowControls] = useState(true);
+  const [isHoveringPersistentControls, setIsHoveringPersistentControls] =
+    useState(false);
 
   const mouseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -132,17 +134,22 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
 
   // ---------------- Controls Visibility ----------------
 
-  const handleMouseMove = useCallback(() => {
-    setShowControls(true);
-
+  const scheduleControlsHide = useCallback(() => {
     if (mouseTimeoutRef.current) {
       clearTimeout(mouseTimeoutRef.current);
     }
 
     mouseTimeoutRef.current = setTimeout(() => {
-      setShowControls(false);
+      if (!isHoveringPersistentControls) {
+        setShowControls(false);
+      }
     }, CONTROLS_HIDE_DELAY);
-  }, []);
+  }, [isHoveringPersistentControls]);
+
+  const handleMouseMove = useCallback(() => {
+    setShowControls(true);
+    scheduleControlsHide();
+  }, [scheduleControlsHide]);
 
   // ---------------- Effects ----------------
 
@@ -235,6 +242,18 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
     };
   }, []);
 
+  useEffect(() => {
+    if (isHoveringPersistentControls) {
+      setShowControls(true);
+      if (mouseTimeoutRef.current) {
+        clearTimeout(mouseTimeoutRef.current);
+      }
+      return;
+    }
+
+    scheduleControlsHide();
+  }, [isHoveringPersistentControls, scheduleControlsHide]);
+
   if (!comic) return null;
 
   return (
@@ -294,7 +313,13 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
           <TooltipProvider>
             <Tooltip>
               <TooltipTrigger asChild>
-                <Button onClick={toggleFullscreen} variant="ghost" size="icon">
+                <Button
+                  onClick={toggleFullscreen}
+                  onMouseEnter={() => setIsHoveringPersistentControls(true)}
+                  onMouseLeave={() => setIsHoveringPersistentControls(false)}
+                  variant="ghost"
+                  size="icon"
+                >
                   {isFullscreen ? (
                     <Minimize2 size={20} />
                   ) : (
@@ -324,6 +349,8 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
 
       <Button
         onClick={previousPage}
+        onMouseEnter={() => setIsHoveringPersistentControls(true)}
+        onMouseLeave={() => setIsHoveringPersistentControls(false)}
         disabled={currentPage === 0}
         variant="ghost"
         size="icon-lg"
@@ -348,6 +375,8 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
 
       <Button
         onClick={nextPage}
+        onMouseEnter={() => setIsHoveringPersistentControls(true)}
+        onMouseLeave={() => setIsHoveringPersistentControls(false)}
         disabled={currentPage === totalPages - 1}
         variant="ghost"
         size="icon-lg"

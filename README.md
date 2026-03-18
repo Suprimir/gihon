@@ -18,11 +18,11 @@
 
 ## 🚀 Scripts
 
-- `pnpm tauri dev` → Ejecuta la app Tauri en modo desarrollo.
-- `pnpm tauri build` → Genera el ejecutable final.
+- `bun run tauri dev` → Ejecuta la app Tauri en modo desarrollo.
+- `bun run tauri build` → Genera el ejecutable final.
 
 ## 🧰 Requisitos
 
-- Node.js >= 18
+- Bun >= 1.1
 - Rust + Cargo
-- Tauri CLI (`npm i -g @tauri-apps/cli`)
+- Tauri CLI (incluido como dependencia del proyecto)

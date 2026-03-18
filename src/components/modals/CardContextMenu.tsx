@@ -54,7 +54,7 @@ export default function CardContextMenu({
           className="flex items-center gap-2 cursor-pointer"
         >
           <Trash size={16} />
-          Delete manga
+          Delete comic
         </ContextMenuItem>
       </ContextMenuContent>
     </ContextMenu>

@@ -125,10 +125,10 @@ export default function Card({
             </div>
           </CardHeader>
           <CardContent className="text-center px-2 py-1.5">
-            <h2 className="font-bold leading-tight text-sm line-clamp-2">
+            <h2 className="font-bold leading-tight text-sm line-clamp-1">
               {comic.comicInfo?.title || "Loading..."}
             </h2>
-            <p className="text-xs mt-0.5">
+            <p className="text-xs mt-0.5 line-clamp-1">
               {comic.comicInfo?.writer || "Unknown"}
             </p>
           </CardContent>

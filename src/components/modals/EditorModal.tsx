@@ -65,7 +65,7 @@ export default function EditorModal({
             <div>
               <p className="text-sm mt-2 break-all">
                 The metadata is only for display in the app and is not applied
-                to the metadata files built into the CBZ file.
+                to the metadata files built into the file.
               </p>
             </div>
           </div>
@@ -82,6 +82,7 @@ export default function EditorModal({
                   id="title"
                   type="text"
                   className="w-full"
+                  maxLength={20}
                   value={actualComic.comicInfo?.title || ""}
                   onChange={(e) =>
                     setActualComic({
@@ -128,9 +129,22 @@ export default function EditorModal({
                 </Label>
                 <Input
                   id="volume"
-                  type="text"
-                  className="w-full"
+                  type="number"
+                  className="w-full [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                   value={actualComic.comicInfo?.volume || ""}
+                  onKeyDown={(e) => {
+                    if (
+                      [
+                        "Backspace",
+                        "Tab",
+                        "Delete",
+                        "ArrowLeft",
+                        "ArrowRight",
+                      ].includes(e.key)
+                    )
+                      return;
+                    if (!/[0-9]/.test(e.key)) e.preventDefault();
+                  }}
                   onChange={(e) =>
                     setActualComic({
                       ...actualComic,
@@ -153,7 +167,21 @@ export default function EditorModal({
                   id="year"
                   type="text"
                   className="w-full"
+                  maxLength={4}
                   value={actualComic.comicInfo?.year || ""}
+                  onKeyDown={(e) => {
+                    if (
+                      [
+                        "Backspace",
+                        "Tab",
+                        "Delete",
+                        "ArrowLeft",
+                        "ArrowRight",
+                      ].includes(e.key)
+                    )
+                      return;
+                    if (!/[0-9]/.test(e.key)) e.preventDefault();
+                  }}
                   onChange={(e) =>
                     setActualComic({
                       ...actualComic,
@@ -177,6 +205,7 @@ export default function EditorModal({
                 id="writer"
                 type="text"
                 className="w-full"
+                maxLength={60}
                 value={actualComic.comicInfo?.writer || ""}
                 onChange={(e) =>
                   setActualComic({
