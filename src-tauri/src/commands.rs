@@ -4,7 +4,7 @@ use crate::errors::AppError;
 use crate::file_manager::FileManager;
 use base64::engine::general_purpose;
 use base64::Engine;
-use log::{error, info, warn};
+use log::{info, warn};
 use std::fs;
 use std::path::Path;
 use tauri::command;
@@ -13,27 +13,25 @@ use tauri::command;
 pub async fn list_files(app_handle: tauri::AppHandle) -> Result<Vec<String>, AppError> {
     info!("Listing files...");
 
-    let fm = FileManager::new(&app_handle).map_err(|e| AppError::General {
-        message: format!("Error starting FileManager {}", e),
-    })?;
+    let handle = app_handle.clone();
 
-    match fm.list_files() {
-        Ok(files) => {
-            info!("Listed {} files", files.len());
-            Ok(files)
-        }
-        Err(e) => {
-            error!("Error listing files: {}", e);
-            Err(AppError::General {
-                message: format!("Error listing files: {}", e),
-            })
-        }
-    }
+    tauri::async_runtime::spawn_blocking(move || {
+        let fm = FileManager::new(&handle).map_err(|e| AppError::General { message: e })?;
+
+        fm.list_files()
+            .map_err(|e| AppError::General { message: e })
+    })
+    .await
+    .map_err(|e| AppError::General {
+        message: format!("Join error: {}", e),
+    })?
 }
 
 #[command]
-pub fn add_file(app_handle: tauri::AppHandle, source_path: String) -> Result<(), AppError> {
+pub async fn add_file(app_handle: tauri::AppHandle, source_path: String) -> Result<(), AppError> {
     info!("Adding file: {}", source_path);
+
+    let handle = app_handle.clone();
 
     if !Path::new(&source_path).exists() {
         warn!("File does not exist: {}", source_path);
@@ -52,22 +50,16 @@ pub fn add_file(app_handle: tauri::AppHandle, source_path: String) -> Result<(),
         });
     }
 
-    let fm = FileManager::new(&app_handle).map_err(|e| AppError::General {
-        message: format!("Error starting FileManager: {}", e),
-    })?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let fm = FileManager::new(&handle).map_err(|e| AppError::General { message: e })?;
 
-    match fm.add_file(&source_path) {
-        Ok(_) => {
-            info!("File added successfully");
-            Ok(())
-        }
-        Err(e) => {
-            error!("Error adding file: {}", e);
-            Err(AppError::General {
-                message: format!("Error adding file: {}", e),
-            })
-        }
-    }
+        fm.add_file(&source_path)
+            .map_err(|e| AppError::General { message: e })
+    })
+    .await
+    .map_err(|e| AppError::General {
+        message: format!("Join error: {}", e),
+    })?
 }
 
 #[command]
@@ -107,97 +99,126 @@ pub fn read_comic_info(
 }
 
 #[command]
-pub fn get_metadata(app_handle: tauri::AppHandle, cbz_path: String) -> Result<ComicInfo, AppError> {
+pub async fn get_metadata(
+    app_handle: tauri::AppHandle,
+    cbz_path: String,
+) -> Result<ComicInfo, AppError> {
     info!("Getting metadata for: {}", cbz_path);
 
-    let fm = FileManager::new(&app_handle).map_err(|e| AppError::General { message: e })?;
+    let handle = app_handle.clone();
 
     let file_stem = std::path::Path::new(&cbz_path)
         .file_stem()
         .and_then(|s| s.to_str())
+        .map(str::to_string)
         .ok_or_else(|| AppError::General {
             message: format!("Invalid file name: {}", cbz_path),
         })?;
 
-    let metadata_file = fm.directory.join(file_stem).join("metadata.json");
-    let comic_info = if metadata_file.exists() {
-        let metadata_data =
-            std::fs::read_to_string(&metadata_file).map_err(|e| AppError::General {
-                message: format!("Failed to read metadata: {}", e),
-            })?;
-        serde_json::from_str::<ComicInfo>(&metadata_data).map_err(|e| AppError::General {
-            message: format!("Failed to parse metadata: {}", e),
-        })?
-    } else {
-        let full_path = fm
-            .get_full_path(&cbz_path)
-            .map_err(|e| AppError::General { message: e })?;
-        let path_str = full_path.to_str().ok_or_else(|| AppError::General {
-            message: format!("Invalid path for {}", cbz_path),
-        })?;
-        CbzViewer::read_comic_info(path_str).map_err(|e| AppError::General { message: e })?
-    };
+    tauri::async_runtime::spawn_blocking(move || {
+        let fm = FileManager::new(&handle).map_err(|e| AppError::General { message: e })?;
 
-    Ok(comic_info)
+        let metadata_file = fm.directory.join(&file_stem).join("metadata.json");
+        let comic_info = if metadata_file.exists() {
+            let metadata_data =
+                std::fs::read_to_string(&metadata_file).map_err(|e| AppError::General {
+                    message: format!("Failed to read metadata: {}", e),
+                })?;
+            serde_json::from_str::<ComicInfo>(&metadata_data).map_err(|e| AppError::General {
+                message: format!("Failed to parse metadata: {}", e),
+            })?
+        } else {
+            let full_path = fm
+                .get_full_path(&cbz_path)
+                .map_err(|e| AppError::General { message: e })?;
+            let path_str = full_path.to_str().ok_or_else(|| AppError::General {
+                message: format!("Invalid path for {}", cbz_path),
+            })?;
+            CbzViewer::read_comic_info(path_str).map_err(|e| AppError::General { message: e })?
+        };
+
+        Ok(comic_info)
+    })
+    .await
+    .map_err(|e| AppError::General {
+        message: format!("Join error: {}", e),
+    })?
 }
 
 #[command]
-pub fn get_cover_image(
+pub async fn get_cover_image(
     app_handle: tauri::AppHandle,
     cbz_path: String,
 ) -> Result<Option<String>, AppError> {
     info!("Getting cover image for: {}", cbz_path);
 
-    let fm = FileManager::new(&app_handle).map_err(|e| AppError::General { message: e })?;
+    let handle = app_handle.clone();
 
     let file_stem = std::path::Path::new(&cbz_path)
         .file_stem()
         .and_then(|s| s.to_str())
+        .map(str::to_string)
         .ok_or_else(|| AppError::General {
             message: format!("Invalid file name: {}", cbz_path),
         })?;
 
-    let cover_extensions = vec!["jpg", "jpeg", "png", "webp"];
+    let cover_extensions: Vec<&str> = vec!["jpg", "jpeg", "png", "webp"];
 
-    for ext in &cover_extensions {
-        let cover_path = fm.directory.join(file_stem).join(format!("cover.{}", ext));
-        if cover_path.exists() {
-            let image_data = fs::read(&cover_path).map_err(|e| AppError::General {
-                message: format!("Failed to read cover image: {}", e),
-            })?;
+    tauri::async_runtime::spawn_blocking(move || {
+        let fm = FileManager::new(&handle).map_err(|e| AppError::General { message: e })?;
 
-            let base64_image = general_purpose::STANDARD.encode(&image_data);
+        for ext in &cover_extensions {
+            let cover_path = fm.directory.join(&file_stem).join(format!("cover.{}", ext));
+            if cover_path.exists() {
+                let image_data = fs::read(&cover_path).map_err(|e| AppError::General {
+                    message: format!("Failed to read cover image: {}", e),
+                })?;
 
-            let mime_type = match ext.as_ref() {
-                "png" => "image/png",
-                "webp" => "image/webp",
-                _ => "image/jpeg",
-            };
+                let base64_image = general_purpose::STANDARD.encode(&image_data);
 
-            return Ok(Some(format!("data:{};base64,{}", mime_type, base64_image)));
+                let mime_type = match ext.as_ref() {
+                    "png" => "image/png",
+                    "webp" => "image/webp",
+                    _ => "image/jpeg",
+                };
+
+                return Ok(Some(format!("data:{};base64,{}", mime_type, base64_image)));
+            }
         }
-    }
 
-    Ok(None)
+        Ok(None)
+    })
+    .await
+    .map_err(|e| AppError::General {
+        message: format!("Join error: {}", e),
+    })?
 }
 
 #[command]
-pub fn load_image_by_index(
+pub async fn load_image_by_index(
     app_handle: tauri::AppHandle,
     cbz_path: String,
     image_index: usize,
 ) -> Result<String, AppError> {
     info!("Loading image index {} from: {}", image_index, cbz_path);
 
-    let fm = FileManager::new(&app_handle).map_err(|e| AppError::General { message: e })?;
-    let full_path = fm
-        .get_full_path(&cbz_path)
-        .map_err(|e| AppError::General { message: e })?;
-    let path_str = full_path.to_str().ok_or_else(|| AppError::General {
-        message: format!("Invalid path for {}", cbz_path),
-    })?;
-    CbzViewer::load_image_by_index(path_str, image_index)
-        .map_err(|e| AppError::General { message: e })
+    let handle = app_handle.clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let fm = FileManager::new(&handle).map_err(|e| AppError::General { message: e })?;
+        let full_path = fm
+            .get_full_path(&cbz_path)
+            .map_err(|e| AppError::General { message: e })?;
+        let path_str = full_path.to_str().ok_or_else(|| AppError::General {
+            message: format!("Invalid path for {}", cbz_path),
+        })?;
+        CbzViewer::load_image_by_index(path_str, image_index)
+            .map_err(|e| AppError::General { message: e })
+    })
+    .await
+    .map_err(|e| AppError::General {
+        message: format!("Join error: {}", e),
+    })?
 }
 
 #[command]
