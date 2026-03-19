@@ -1,17 +1,24 @@
 import { useCallback, useEffect, useState } from "react";
 import "./App.css";
 import { Card, MangaViewer, Navbar } from "./components/index";
-import { Upload } from "lucide-react";
+import { Loader2, Upload } from "lucide-react";
 import { listen } from "@tauri-apps/api/event";
 import { invoke } from "@tauri-apps/api/core";
 import { Comic } from "./types";
 import { toast } from "sonner";
+
+const BATCH_SIZE = 2;
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
   const [files, setFiles] = useState<string[]>([]);
   const [selectedComic, setSelectedComic] = useState<Comic | null>(null);
   const [isDragEntered, setIsDragEntered] = useState(false);
+  const [isAddingFiles, setIsAddingFiles] = useState(false);
+  const [importProgress, setImportProgress] = useState({
+    total: 0,
+    completed: 0,
+  });
 
   const listFiles = useCallback(async (): Promise<string[]> => {
     try {
@@ -61,16 +68,50 @@ function App() {
   }, []);
 
   const handleFileDrop = async (paths: string[]) => {
+    const validPaths = paths?.filter(Boolean) ?? [];
+    if (validPaths.length === 0) return;
+
+    setIsAddingFiles(true);
     setIsDragEntered(false);
+    setImportProgress({ total: validPaths.length, completed: 0 });
+
+    let batch: string[] = [];
+    let completed = 0;
 
     try {
-      await Promise.all(paths.map((file) => addFile(file)));
+      for (const file of validPaths) {
+        batch.push(file);
+        if (batch.length === BATCH_SIZE) {
+          await Promise.all(batch.map((file) => addFile(file)));
+          completed += batch.length;
+          setImportProgress({ total: validPaths.length, completed });
+          batch = [];
+
+          await new Promise((resolve) => setTimeout(resolve, 0));
+        }
+      }
+
+      if (batch.length > 0) {
+        await Promise.all(batch.map((file) => addFile(file)));
+        completed += batch.length;
+        setImportProgress({ total: validPaths.length, completed });
+      }
+
       await refreshFiles();
+      toast.success("Files added successfully");
     } catch (error) {
       console.error("Error adding files:", error);
       toast.error("Error adding files");
+    } finally {
+      setIsAddingFiles(false);
+      setImportProgress({ total: 0, completed: 0 });
     }
   };
+
+  const progressPercent =
+    importProgress.total > 0
+      ? Math.round((importProgress.completed / importProgress.total) * 100)
+      : 0;
 
   return (
     <main className="w-screen h-screen flex flex-col overflow-hidden relative">
@@ -101,6 +142,27 @@ function App() {
           <p className="text-lg mt-2">
             Supported formats: .cbz, .zip, .cbr, .rar
           </p>
+        </div>
+      )}
+
+      {isAddingFiles && (
+        <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center z-50 pointer-events-none">
+          <div className="w-[90%] max-w-md rounded-xl border bg-card p-6 shadow-lg">
+            <div className="flex items-center gap-3 mb-3">
+              <Loader2 className="animate-spin" size={20} />
+              <p className="text-lg font-semibold">Adding files...</p>
+            </div>
+            <p className="text-sm text-muted-foreground mb-3">
+              {importProgress.completed} / {importProgress.total} processed (
+              {progressPercent}%)
+            </p>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full bg-primary transition-all duration-200"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
+          </div>
         </div>
       )}
 
