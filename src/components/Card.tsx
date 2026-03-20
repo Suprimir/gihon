@@ -1,7 +1,7 @@
 import { ImageOff } from "lucide-react";
 import { Comic, Metadata } from "../types";
 import { invoke } from "@tauri-apps/api/core";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import CardContextMenu from "./modals/CardContextMenu";
 import EditorModal from "./modals/EditorModal";
 import { Card as ShadCard, CardContent, CardHeader } from "./ui/card";
@@ -23,7 +23,9 @@ export default function Card({
   const [comic, setComic] = useState<Comic>({ fileName, comicInfo: null });
   const [coverImage, setCoverImage] = useState<string>("");
   const [isLoading, setIsLoading] = useState(true);
+  const [shouldLoad, setShouldLoad] = useState(false);
   const [editorModal, setEditorModal] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
 
   // ---------------- Data loading ----------------
 
@@ -88,52 +90,90 @@ export default function Card({
   // ---------------- Effects ----------------
 
   useEffect(() => {
+    // Fallback if the observer isnt supported :)
+    if (!cardRef.current) {
+      setShouldLoad(true);
+      return;
+    }
+
+    if (!("IntersectionObserver" in window)) {
+      setShouldLoad(true);
+      return;
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setShouldLoad(true);
+          observer.disconnect();
+        }
+      },
+      {
+        rootMargin: "250px",
+      },
+    );
+
+    observer.observe(cardRef.current);
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!shouldLoad) return;
     loadData();
-  }, [loadData]);
+  }, [loadData, shouldLoad]);
+
+  useEffect(() => {
+    setComic({ fileName, comicInfo: null });
+    setCoverImage("");
+    setIsLoading(true);
+  }, [fileName]);
 
   if (!isVisible()) return null;
 
   return (
     <>
-      <CardContextMenu
-        comic={comic}
-        onEdit={openEditor}
-        onDelete={handleDelete}
-      >
-        <ShadCard
-          onClick={handleClick}
-          className="w-36 hover:scale-105 p-0 gap-0 transition-all duration-200 cursor-pointer"
+      <div ref={cardRef}>
+        <CardContextMenu
+          comic={comic}
+          onEdit={openEditor}
+          onDelete={handleDelete}
         >
-          <CardHeader className="p-0 gap-0">
-            <div className="relative w-full h-48 rounded-t-lg flex items-center justify-center overflow-hidden">
-              {isLoading ? (
-                <div className="w-full h-full animate-pulse" />
-              ) : coverImage ? (
-                <img
-                  src={coverImage}
-                  alt={comic.comicInfo?.title || fileName}
-                  className="w-full h-full object-cover rounded-t-xl"
-                />
-              ) : (
-                <div className="flex flex-col items-center justify-center h-full gap-2">
-                  <ImageOff size={48} />
-                  <p className="text-xs mt-2 px-3 text-center">
-                    {comic.comicInfo?.title || fileName}
-                  </p>
-                </div>
-              )}
-            </div>
-          </CardHeader>
-          <CardContent className="text-center px-2 py-1.5">
-            <h2 className="font-bold leading-tight text-sm line-clamp-1">
-              {comic.comicInfo?.title || "Loading..."}
-            </h2>
-            <p className="text-xs mt-0.5 line-clamp-1">
-              {comic.comicInfo?.writer || "Unknown"}
-            </p>
-          </CardContent>
-        </ShadCard>
-      </CardContextMenu>
+          <ShadCard
+            onClick={handleClick}
+            className="w-36 hover:scale-105 p-0 gap-0 transition-all duration-200 cursor-pointer"
+          >
+            <CardHeader className="p-0 gap-0">
+              <div className="relative w-full h-48 rounded-t-lg flex items-center justify-center overflow-hidden">
+                {isLoading ? (
+                  <div className="w-full h-full animate-pulse" />
+                ) : coverImage ? (
+                  <img
+                    src={coverImage}
+                    alt={comic.comicInfo?.title || fileName}
+                    className="w-full h-full object-cover rounded-t-xl"
+                  />
+                ) : (
+                  <div className="flex flex-col items-center justify-center h-full gap-2">
+                    <ImageOff size={48} />
+                    <p className="text-xs mt-2 px-3 text-center">
+                      {comic.comicInfo?.title || fileName}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </CardHeader>
+            <CardContent className="text-center px-2 py-1.5">
+              <h2 className="font-bold leading-tight text-sm line-clamp-1">
+                {comic.comicInfo?.title || "Loading..."}
+              </h2>
+              <p className="text-xs mt-0.5 line-clamp-1">
+                {comic.comicInfo?.writer || "Unknown"}
+              </p>
+            </CardContent>
+          </ShadCard>
+        </CardContextMenu>
+      </div>
 
       <EditorModal
         key={`${fileName}-${editorModal}`}

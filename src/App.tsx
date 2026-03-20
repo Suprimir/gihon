@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { UIEvent, useCallback, useEffect, useMemo, useState } from "react";
 import "./App.css";
 import { Card, MangaViewer, Navbar } from "./components/index";
 import { Loader2, Upload } from "lucide-react";
@@ -8,6 +8,8 @@ import { Comic } from "./types";
 import { toast } from "sonner";
 
 const BATCH_SIZE = 2;
+const INITIAL_RENDER_COUNT = 48;
+const LOAD_MORE_STEP = 24;
 
 function App() {
   const [searchTerm, setSearchTerm] = useState("");
@@ -15,6 +17,7 @@ function App() {
   const [selectedComic, setSelectedComic] = useState<Comic | null>(null);
   const [isDragEntered, setIsDragEntered] = useState(false);
   const [isAddingFiles, setIsAddingFiles] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(INITIAL_RENDER_COUNT);
   const [importProgress, setImportProgress] = useState({
     total: 0,
     completed: 0,
@@ -67,6 +70,31 @@ function App() {
     };
   }, []);
 
+  useEffect(() => {
+    setVisibleCount(Math.min(files.length, INITIAL_RENDER_COUNT));
+  }, [files.length]);
+
+  const visibleFiles = useMemo(() => {
+    return files.slice(0, visibleCount);
+  }, [files, visibleCount]);
+
+  const handleGridScroll = useCallback(
+    (event: UIEvent<HTMLDivElement>) => {
+      console.log("scrolling");
+      console.log(visibleCount, files.length);
+      const target = event.currentTarget;
+      const remaining =
+        target.scrollHeight - target.scrollTop - target.clientHeight;
+
+      if (remaining < 300 && visibleCount < files.length) {
+        setVisibleCount((current) =>
+          Math.min(current + LOAD_MORE_STEP, files.length),
+        );
+      }
+    },
+    [files.length, visibleCount],
+  );
+
   const handleFileDrop = async (paths: string[]) => {
     const validPaths = paths?.filter(Boolean) ?? [];
     if (validPaths.length === 0) return;
@@ -117,14 +145,17 @@ function App() {
     <main className="w-screen h-screen flex flex-col overflow-hidden relative">
       <Navbar setSearchTerm={setSearchTerm} />
 
-      <div className="flex-1 flex flex-row flex-wrap justify-center content-start gap-4 p-4 overflow-y-auto bg-accent">
+      <div
+        onScroll={handleGridScroll}
+        className="flex-1 flex flex-row flex-wrap justify-center content-start gap-4 p-4 overflow-y-auto bg-accent"
+      >
         {files.length === 0 && (
           <div className="text-center mt-20">
             No comic files found. Drag and drop your .cbz, .zip, .cbr, .rar
             files to get started.
           </div>
         )}
-        {files.map((fileName) => (
+        {visibleFiles.map((fileName) => (
           <Card
             searchTerm={searchTerm}
             key={fileName}
