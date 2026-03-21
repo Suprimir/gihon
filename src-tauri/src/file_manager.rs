@@ -3,8 +3,6 @@ use std::{fs, path::Path};
 use tauri::{AppHandle, Manager};
 
 use crate::cbz_viewer::{CbzViewer, ComicInfo};
-use base64::engine::general_purpose;
-use base64::Engine;
 pub struct FileManager {
     pub directory: PathBuf,
 }
@@ -89,8 +87,8 @@ impl FileManager {
 
         let comic_cover =
             CbzViewer::extract_cover_image(destination_path.to_str().ok_or("Invalid path")?)?;
-        if let Some(cover_image_data) = comic_cover {
-            self.copy_cover_image(&folder_path, &cover_image_data)
+        if let Some((cover_image_bytes, extension)) = comic_cover {
+            self.copy_cover_image_bytes(&folder_path, &cover_image_bytes, &extension)
                 .map_err(|e| e.to_string())?;
         }
 
@@ -146,29 +144,19 @@ impl FileManager {
         }
     }
 
-    pub fn copy_cover_image(
+    pub fn copy_cover_image_bytes(
         &self,
         folder_path: &PathBuf,
-        cover_image_data: &str,
+        image_data: &[u8],
+        extension: &str,
     ) -> Result<(), String> {
-        let cover_path = folder_path.join("cover");
-        let base64_data = cover_image_data
-            .split(',')
-            .nth(1)
-            .ok_or("Invalid image data")?;
-        let image_data = general_purpose::STANDARD
-            .decode(base64_data)
-            .map_err(|e| e.to_string())?;
-
-        let extension = if cover_image_data.starts_with("data:image/jpeg") {
-            "jpg"
-        } else if cover_image_data.starts_with("data:image/png") {
-            "png"
-        } else {
-            return Err("Unsupported image format".to_string());
+        let extension = match extension {
+            "jpg" | "jpeg" => "jpg",
+            "png" => "png",
+            _ => return Err("Unsupported image format".to_string()),
         };
 
-        let cover_path = cover_path.with_extension(extension);
+        let cover_path = folder_path.join("cover").with_extension(extension);
         fs::write(cover_path, image_data).map_err(|e| e.to_string())?;
         Ok(())
     }

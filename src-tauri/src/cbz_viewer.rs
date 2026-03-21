@@ -78,7 +78,7 @@ impl CbzViewer {
         Err("ComicInfo.xml not found".into())
     }
 
-    pub fn extract_cover_image(cbz_path: &str) -> Result<Option<String>, String> {
+    pub fn extract_cover_image(cbz_path: &str) -> Result<Option<(Vec<u8>, String)>, String> {
         let file = File::open(cbz_path).map_err(|e| e.to_string())?;
         let mut archive = ZipArchive::new(BufReader::new(file)).map_err(|e| e.to_string())?;
         let mut archives = Vec::new();
@@ -97,16 +97,12 @@ impl CbzViewer {
             if name_lower.ends_with(".jpg") || name_lower.ends_with(".png") {
                 let mut buffer = Vec::new();
                 file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
-                let encoded = general_purpose::STANDARD.encode(buffer);
-                return Ok(Some(format!(
-                    "data:image/{};base64,{}",
-                    if name_lower.ends_with(".png") {
-                        "png"
-                    } else {
-                        "jpeg"
-                    },
-                    encoded
-                )));
+                let extension = if name_lower.ends_with(".png") {
+                    "png"
+                } else {
+                    "jpg"
+                };
+                return Ok(Some((buffer, extension.to_string())));
             }
         }
 
