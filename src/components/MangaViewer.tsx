@@ -4,6 +4,7 @@ import {
   ChevronRight,
   Maximize2,
   Minimize2,
+  CameraIcon,
 } from "lucide-react";
 import {
   useCallback,
@@ -132,7 +133,6 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
   // ---------------- Fullscreen ----------------
 
   const toggleFullscreen = useCallback(() => {
-    console.log(typeof comic);
     if (comic === null) return;
 
     if (!document.fullscreenElement) {
@@ -141,6 +141,23 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
       document.exitFullscreen();
     }
   }, []);
+
+  // ---------------- Save Image ----------------
+
+  const saveCurrentImage = useCallback(async () => {
+    if (!currentImage) return;
+
+    try {
+      await invoke("save_image_by_index", {
+        cbzPath: comic?.fileName,
+        imageIndex: currentPage,
+      });
+      toast.success("Image saved successfully");
+    } catch (error) {
+      toast.error("Error saving image");
+      console.error("Error saving image:", error);
+    }
+  }, [currentPage]);
 
   // ---------------- Controls Visibility ----------------
 
@@ -352,6 +369,24 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
               </TooltipTrigger>
               <TooltipContent>
                 <p>{isFullscreen ? "Exit Fullscreen (F)" : "Fullscreen (F)"}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={saveCurrentImage}
+                  onMouseEnter={() => setIsHoveringPersistentControls(true)}
+                  onMouseLeave={() => setIsHoveringPersistentControls(false)}
+                  variant="ghost"
+                  size="icon"
+                >
+                  <CameraIcon size={20} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Save Image (Ctrl + S)</p>
               </TooltipContent>
             </Tooltip>
           </TooltipProvider>

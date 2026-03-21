@@ -80,8 +80,6 @@ function App() {
 
   const handleGridScroll = useCallback(
     (event: UIEvent<HTMLDivElement>) => {
-      console.log("scrolling");
-      console.log(visibleCount, files.length);
       const target = event.currentTarget;
       const remaining =
         target.scrollHeight - target.scrollTop - target.clientHeight;

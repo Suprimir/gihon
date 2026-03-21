@@ -164,4 +164,29 @@ impl CbzViewer {
 
         Err(format!("Image '{}' not found in archive", image_name))
     }
+
+    pub fn save_image_by_index(cbz_path: &str, image_index: usize) -> Result<Vec<u8>, String> {
+        let file = File::open(cbz_path).map_err(|e| e.to_string())?;
+        let mut archive = ZipArchive::new(BufReader::new(file)).map_err(|e| e.to_string())?;
+
+        let images_list = Self::get_image_list(cbz_path)?;
+
+        if images_list.len() == 0 {
+            return Err(format!("No images found in archive: {}", cbz_path));
+        }
+
+        let image_name = &images_list[image_index];
+
+        for i in 0..archive.len() {
+            let mut file = archive.by_index(i).map_err(|e| e.to_string())?;
+
+            if file.name() == image_name {
+                let mut buffer = Vec::new();
+                file.read_to_end(&mut buffer).map_err(|e| e.to_string())?;
+                return Ok(buffer);
+            }
+        }
+
+        Err(format!("Image '{}' not found in archive", image_name))
+    }
 }

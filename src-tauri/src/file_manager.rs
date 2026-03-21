@@ -5,6 +5,7 @@ use tauri::{AppHandle, Manager};
 use crate::cbz_viewer::{CbzViewer, ComicInfo};
 pub struct FileManager {
     pub directory: PathBuf,
+    pub screenshots_dir: String,
 }
 
 impl FileManager {
@@ -22,6 +23,9 @@ impl FileManager {
 
         Ok(Self {
             directory: data_dir,
+            screenshots_dir: dirs::picture_dir()
+                .map(|p| p.join("Gihon Screenshots").to_str().unwrap().to_string())
+                .unwrap_or_else(|| "Gihon Screenshots".to_string()),
         })
     }
 
@@ -193,5 +197,17 @@ impl FileManager {
             }
         }
         Ok(files)
+    }
+
+    pub fn save_image(&self, buffer: &[u8]) {
+        fs::create_dir_all(&self.screenshots_dir).unwrap();
+
+        let timestamp = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_secs();
+        let file_path =
+            Path::new(&self.screenshots_dir).join(format!("screenshot_{}.png", timestamp));
+        fs::write(file_path, buffer).unwrap();
     }
 }

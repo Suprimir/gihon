@@ -222,6 +222,39 @@ pub async fn load_image_by_index(
 }
 
 #[command]
+pub async fn save_image_by_index(
+    app_handle: tauri::AppHandle,
+    cbz_path: String,
+    image_index: usize,
+) -> Result<(), AppError> {
+    info!("Saving image index {} from: {}", image_index, cbz_path);
+
+    let handle = app_handle.clone();
+
+    tauri::async_runtime::spawn_blocking(move || {
+        let fm = FileManager::new(&handle).map_err(|e| AppError::General { message: e })?;
+        let full_path = fm
+            .get_full_path(&cbz_path)
+            .map_err(|e| AppError::General { message: e })?;
+        let path_str = full_path.to_str().ok_or_else(|| AppError::General {
+            message: format!("Invalid path for {}", cbz_path),
+        })?;
+        let image_data = CbzViewer::save_image_by_index(path_str, image_index).map_err(|e| {
+            AppError::General {
+                message: format!("Failed to save image: {}", e),
+            }
+        })?;
+
+        fm.save_image(&image_data);
+        Ok(())
+    })
+    .await
+    .map_err(|e| AppError::General {
+        message: format!("Join error: {}", e),
+    })?
+}
+
+#[command]
 pub fn get_page_count(app_handle: tauri::AppHandle, cbz_path: String) -> Result<usize, AppError> {
     info!("Getting page count for: {}", cbz_path);
 
