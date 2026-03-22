@@ -140,7 +140,7 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
     } else {
       document.exitFullscreen();
     }
-  }, []);
+  }, [comic]);
 
   // ---------------- Save Image ----------------
 
@@ -180,6 +180,7 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
 
   const handleViewerKeyDown = useCallback(
     (e: ReactKeyboardEvent<HTMLDivElement>) => {
+      console.log("Key pressed in viewer:", e.key);
       if (e.key === "f" || e.key === "F") {
         toggleFullscreen();
       }
@@ -239,6 +240,15 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
             toggleFullscreen();
           } else {
             onClose();
+          }
+          break;
+      }
+
+      switch (e.ctrlKey) {
+        case true:
+          if (e.key === "s" || e.key === "S") {
+            e.preventDefault();
+            saveCurrentImage();
           }
           break;
       }

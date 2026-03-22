@@ -178,11 +178,11 @@ jobs:
             if [ -n "$PREV_TAG" ]; then
               echo "Range: $PREV_TAG..${{ github.sha }}"
               echo
-              git log "$PREV_TAG..${{ github.sha }}" --no-merges --pretty=format:'- %h %s (%an)'
+              git log "$PREV_TAG..${{ github.sha }}" --no-merges --pretty=format:'- %h %s'
             else
               echo "Range: initial commit..${{ github.sha }}"
               echo
-              git log --no-merges --pretty=format:'- %h %s (%an)'
+              git log --no-merges --pretty=format:'- %h %s'
             fi
           } > release-notes.md
 
