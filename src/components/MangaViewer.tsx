@@ -157,7 +157,7 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
       toast.error("Error saving image");
       console.error("Error saving image:", error);
     }
-  }, [currentPage]);
+  }, [currentImage]);
 
   // ---------------- Controls Visibility ----------------
 
@@ -180,7 +180,6 @@ export default function MangaViewer({ comic, onClose }: MangaViewerProps) {
 
   const handleViewerKeyDown = useCallback(
     (e: ReactKeyboardEvent<HTMLDivElement>) => {
-      console.log("Key pressed in viewer:", e.key);
       if (e.key === "f" || e.key === "F") {
         toggleFullscreen();
       }
